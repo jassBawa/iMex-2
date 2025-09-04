@@ -37,7 +37,7 @@ ws.onclose = () => {
 setInterval(() => {
     console.log(assets)
   client.xAdd('trades', '*', { 'assets': JSON.stringify(assets)  });
-}, 3000);
+}, 100);
 
 interface Trade {
   A: string;
