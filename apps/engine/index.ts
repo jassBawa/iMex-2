@@ -12,7 +12,7 @@ while(true){
         BLOCK: 0 // wait forever
     })
 
-    // const res = JSON.parse(JSON.stringify(result)) as ;
+
 
     console.log('result', result)
     if(result){
