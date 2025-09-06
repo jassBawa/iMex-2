@@ -1,5 +1,5 @@
 import { createClient } from 'redis';
-import { users, type OpenTrade } from './memoryDb';
+import { handlePriceUpdateEntry, handleUserCreation } from './handlers';
 
 const client = createClient();
 
@@ -20,7 +20,7 @@ client.on('connect', async () => {
     let messages;
     if (response) {
       if (response[0]?.messages[0].message) {
-         messages = response[0]?.messages;
+        messages = response[0]?.messages;
       }
     }
 
@@ -29,17 +29,18 @@ client.on('connect', async () => {
       continue;
     }
 
-    // console.log(messages[0])
-    const payload = messages[0].message;
 
+    const payload = messages[0].message;
     if (payload.type === 'PRICE_UPDATE') {
-      // console.log("handle price update");
-      // console.log(payload)
+      const data = JSON.parse(payload.data);
+      handlePriceUpdateEntry(data);
     } else if (payload.type === 'ORDER') {
-      console.log('handle trade');
       console.log(payload);
       const data = JSON.parse(payload.data);
       handleTradeExecution(data, payload.userId);
+    } else if (payload.type === 'USER_CREATED') {
+      const parsedData = JSON.parse(payload.data);
+      handleUserCreation(parsedData);
     }
   }
 });
@@ -68,5 +69,3 @@ async function handleTradeExecution(data: Trade, userId: string) {
     id: data.id,
   });
 }
-
-async function handleUpdateLocalPrices() {}

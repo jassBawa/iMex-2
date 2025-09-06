@@ -3,6 +3,7 @@ import { signupSchema } from '../validations/signupSchema';
 import jwt from 'jsonwebtoken';
 import { sendEmail } from '../services/mail.service';
 import dbClient from '@imex/db';
+import { createUserInEngine } from '../services/engine.service';
 
 export async function signupHandler(
   req: Request,
@@ -10,18 +11,15 @@ export async function signupHandler(
   next: NextFunction
 ) {
   try {
-    const {success, data, error} = signupSchema.safeParse(req.body);
+    const { success, data, error } = signupSchema.safeParse(req.body);
 
     if (!success) {
-      return res
-        .status(400)
-        .json({ error: error.flatten().fieldErrors });
+      return res.status(400).json({ error: error.flatten().fieldErrors });
     }
 
     const { email } = data;
     const token = jwt.sign(data, process.env.JWT_SECRET!, {
       expiresIn: '5m',
-      
     });
 
     const isUserAvailable = await dbClient.user.findFirst({
@@ -31,12 +29,14 @@ export async function signupHandler(
     });
 
     if (!isUserAvailable) {
-      await dbClient.user.create({
+      const user = await dbClient.user.create({
         data: {
           email: email,
           lastLoggedIn: new Date(),
         },
       });
+
+      await createUserInEngine(user);
     }
 
     // if (process.env.NODE_ENV === 'production') {

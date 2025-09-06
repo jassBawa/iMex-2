@@ -24,12 +24,15 @@ ws.onmessage = async (event) => {
   const { data } = event;
   const parseData = JSON.parse(data).data as Trade;
   const [decimal, integer] = getIntAndDecimal(parseData.a);
-  // todo: implement 1%
+  
+  const pricePlusOnePercent = Math.round(integer * 1.01);
+  // console.log(parseData)
   assets[parseData.s] = {
-    buyPrice: integer + 10**decimal,
+    buyPrice: pricePlusOnePercent,
     sellPrice: integer,
     decimal: decimal,
   };
+  // console.log(assets)
 };
 
 ws.onclose = () => {
@@ -41,7 +44,8 @@ setInterval(() => {
     return;
   }
   client.xAdd('trades', '*', { data: JSON.stringify(assets), type: "PRICE_UPDATE" });
-}, 100);
+  console.log(assets)
+}, 1000);
 
 interface Trade {
   A: string;

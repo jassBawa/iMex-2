@@ -1,33 +1,11 @@
+import {
+  type PriceStore,
+  type User,
+  type UserStore,
+} from './types';
 
-interface Balance{
-    amount: number;
-    currency: string
-}
+export const prices: PriceStore = {};
+export const users: UserStore = {};
 
-interface Asset {
-    name: string;
-    symbol: string;
-    buyPrice: number;
-    sellPrice:number
-    decimals:number;
-}
+//TODO: we can create another array which will store all orders in one place that will be easy to traverse.
 
-export interface OpenTrade {
-    id: string;
-    openPrice: number;
-    closePrice?: number;
-    leverage: number;
-    pnl: number;
-    asset: Asset;
-    liquidated: boolean;
-    createdAt: Date;
-}
-
-interface User{
-    id: string
-    email: string;
-    balance: Balance
-    trades: OpenTrade[]
-}
-
-export const users:Record<string,User> = {}
