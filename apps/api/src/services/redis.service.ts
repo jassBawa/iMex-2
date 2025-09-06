@@ -29,6 +29,7 @@ export class RedisSubscriber {
           delete this.callbacks[gotId];
         }
       }
+
       // resolving the promise
     }
   }

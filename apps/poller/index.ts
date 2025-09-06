@@ -22,12 +22,14 @@ ws.onopen = (event) => {
 
 ws.onmessage = async (event) => {
   const { data } = event;
-  const parseData = (JSON.parse(data)).data as Trade;
-  const {decimal, integer} = getIntAndDecimal(parseData.a);
-    assets[parseData.s] = {
-        "price": integer,
-        "decimal": decimal,
-    }
+  const parseData = JSON.parse(data).data as Trade;
+  const [decimal, integer] = getIntAndDecimal(parseData.a);
+  // todo: implement 1%
+  assets[parseData.s] = {
+    buyPrice: integer + 10**decimal,
+    sellPrice: integer,
+    decimal: decimal,
+  };
 };
 
 ws.onclose = () => {
@@ -35,8 +37,10 @@ ws.onclose = () => {
 };
 
 setInterval(() => {
-    console.log(assets)
-  client.xAdd('trades', '*', { 'assets': JSON.stringify(assets)  });
+  if (Object.keys(assets).length === 0) {
+    return;
+  }
+  client.xAdd('trades', '*', { data: JSON.stringify(assets), type: "PRICE_UPDATE" });
 }, 100);
 
 interface Trade {
@@ -51,12 +55,11 @@ interface Trade {
   u: number;
 }
 
+function getIntAndDecimal(price: string) {
+  const arr = price.split('.');
+  const decimal = arr[1].length;
 
-function getIntAndDecimal(price: string){
-    const arr = price.split('.');
-    const decimal = arr[1].length;
-    
-    const integer = Number(arr.join(''));
+  const integer = Number(arr.join(''));
 
-    return {decimal, integer}
+  return [decimal, integer];
 }
