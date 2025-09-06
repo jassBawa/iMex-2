@@ -21,10 +21,10 @@ export async function createOrder(req: Request, res: Response) {
 
   const { asset, leverage, quantity, slippage, type } = parsedData.data;
 
-  const id = Date.now().toString();
+  const requestId = Date.now().toString();
 
   const data = JSON.stringify({
-    id,
+    requestId,
     asset,
     quantity,
     type,
@@ -39,11 +39,11 @@ export async function createOrder(req: Request, res: Response) {
   });
 
   try {
-    await redisSubscriber.waitForMessage(id);
+    await redisSubscriber.waitForMessage(requestId);
 
     res.status(201).json({
       message: 'Order placed',
-      orderId: id,
+      requestId: requestId,
     });
   } catch (err: any) {
     res.status(411).json({
@@ -64,9 +64,9 @@ export async function closeOrder(req: Request, res: Response) {
 
   const { orderId } = data;
 
-  const id = Date.now().toString();
+  const requestId = Date.now().toString();
   const payload = JSON.stringify({
-    id,
+    requestId,
     orderId,
   });
 
@@ -77,7 +77,7 @@ export async function closeOrder(req: Request, res: Response) {
   });
 
   try {
-    await redisSubscriber.waitForMessage(id);
+    await redisSubscriber.waitForMessage(requestId);
 
     res.status(201).json({
       message: 'Order placed',

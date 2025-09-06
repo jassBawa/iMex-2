@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { signupSchema } from '../validations/signupSchema';
 import jwt from 'jsonwebtoken';
 import { sendEmail } from '../services/mail.service';
+import dbClient from '@imex/db';
 
 export async function signupHandler(
   req: Request,
@@ -9,60 +10,89 @@ export async function signupHandler(
   next: NextFunction
 ) {
   try {
-    const parsed = signupSchema.safeParse(req.body);
+    const {success, data, error} = signupSchema.safeParse(req.body);
 
-    if (!parsed.success) {
+    if (!success) {
       return res
         .status(400)
-        .json({ error: parsed.error.flatten().fieldErrors });
+        .json({ error: error.flatten().fieldErrors });
     }
 
-    const { email } = parsed.data;
-    const token = jwt.sign(email, process.env.JWT_SECRET!);
+    const { email } = data;
+    const token = jwt.sign(data, process.env.JWT_SECRET!, {
+      expiresIn: '5m',
+      
+    });
 
-    if (process.env.NODE_ENV === 'production') {
-      const { data, error } = await sendEmail(email, token);
-      if (error) {
-        res.status(400).json({ error });
-      }
-    } else {
-      console.log(
-        `http://localhost:4000/v1/api/auth/signin/post?token=${token}`
-      );
+    const isUserAvailable = await dbClient.user.findFirst({
+      where: {
+        email,
+      },
+    });
+
+    if (!isUserAvailable) {
+      await dbClient.user.create({
+        data: {
+          email: email,
+          lastLoggedIn: new Date(),
+        },
+      });
     }
 
-    res.status(201).json({});
+    // if (process.env.NODE_ENV === 'production') {
+    //   const { error } = await sendEmail(email, token);
+    //   if (error) {
+    //     res.status(400).json({ error });
+    //   }
+    // } else {
+    console.log(
+      `http://localhost:4000/api/v1/auth/signin/verify?token=${token}`
+    );
+    // }
+
+    res.status(201).json({ message: 'Email Sent' });
   } catch (err: any) {
-    next(err);
+    console.log(err);
+    res.status(500).json({ message: 'Interal server error' });
   }
 }
 
-export async function signInVerify(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
+export async function signInVerify(req: Request, res: Response) {
   try {
     const token = req.query.token?.toString();
 
     if (!token) {
       console.log('Token not found');
-      res.status(411).json({
-        message: 'Token not found',
+      res.status(400).json({
+        message: 'Verification token not found in params',
       });
       return;
     }
 
-    const decodedToken = jwt.verify(token, process.env.JWT_SECRET!);
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET!); // email;
 
-    //todo: review this approach
-    res.cookie('jwt', token);
-    res.cookie('email', decodedToken.toString());
+    if (!decodedToken) {
+      res.status(400).json({ message: 'Invalid token' });
+      return;
+    }
 
-    res.json({
-      message: 'Logged in',
+    const sessionToken = jwt.sign(
+      { email: decodedToken },
+      process.env.JWT_SECRET!,
+      { expiresIn: '2d' }
+    );
+
+    res.cookie('token', sessionToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 2 * 24 * 60 * 60 * 1000,
+    });
+
+    res.status(200).json({
+      message: 'User verified successfully. Logged in.',
     });
   } catch (err: any) {
-    next(err);
+    console.log(err);
+    res.status(500).json({ message: 'Interal server error' });
   }
 }

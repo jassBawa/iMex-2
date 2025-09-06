@@ -4,6 +4,6 @@ import { signInVerify, signupHandler } from '../controllers/auth.controller';
 const authRouter = express();
 
 authRouter.post('/signup', signupHandler);
-authRouter.get('/sigin/post', signInVerify)
+authRouter.get('/signin/verify', signInVerify)
 
 export default authRouter;
