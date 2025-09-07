@@ -1,14 +1,11 @@
-import { createClient } from 'redis';
 import {
-  handlePriceUpdateEntry,
-  handleOpenTrade,
-  handleUserCreation,
   handleCloseTrade,
+  handleGetUserBalance,
+  handleOpenTrade,
+  handlePriceUpdateEntry,
+  handleUserCreation,
 } from './handlers';
-
-const client = createClient();
-
-client.connect();
+import { client } from './utils/redis-client';
 
 client.on('connect', async () => {
   while (1) {
@@ -21,37 +18,37 @@ client.on('connect', async () => {
         BLOCK: 0,
       }
     )) as any[];
-
     if (response) {
       const requestId = response[0]?.messages[0]?.message.reqId;
       const requestType = response[0]?.messages[0]?.message.type;
 
       const payload = response[0].messages[0].message;
       const data = JSON.parse(payload.data);
-      console.log(payload);
-
       switch (requestType) {
         case 'USER_CREATED':
           handleUserCreation(data, requestId);
-          return;
+          break;
         case 'CREATE_ORDER':
           handleOpenTrade(data, requestId);
-          return;
+          break;
         case 'CLOSE_ORDER':
           handleCloseTrade(data, requestId);
-          return;
+          break;
         case 'PRICE_UPDATE':
           handlePriceUpdateEntry(data);
-          return;
+          break;
         case 'GET_USER_BALANCE':
-        //todo: impl this
-          // handleGetUserBalance(data, requestId);
-          return;
-        case 'GET_USER_ASSET_BALANCE':
-          return;
+          handleGetUserBalance(data, requestId);
+          break;
+        // case 'GET_USER_ASSET_BALANCE':
+        // return;
         default:
           console.log('Irrelevant event recieved');
       }
     }
   }
+});
+
+client.on('error', () => {
+  console.log('Redis connection closed due to some error');
 });

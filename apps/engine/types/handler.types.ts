@@ -1,10 +1,9 @@
-import type { Trade } from ".";
+import type { Trade } from '.';
 
 export interface UserCreated {
   email: string;
   id: string;
 }
-
 
 export interface CloseOrderPayload {
   email: string;
@@ -13,6 +12,9 @@ export interface CloseOrderPayload {
 
 export interface OpenTradePayload {
   email: string;
-  trade: Trade
+  trade: Trade;
 }
 
+export interface UserPayload {
+  email: string;
+}

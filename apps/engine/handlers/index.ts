@@ -1,66 +1,63 @@
-import { createClient } from 'redis';
 import { prices, users } from '../memoryDb';
 import type { PriceStore, User } from '../types';
-import { sendAcknowledgement } from '../utils/send-ack';
 import type {
   CloseOrderPayload,
   OpenTradePayload,
   UserCreated,
+  UserPayload,
 } from '../types/handler.types';
-
-const client = createClient();
-client.connect();
+import { calculatePnl, closeOrder } from '../utils/liquidation-utils';
+import { sendAcknowledgement } from '../utils/send-ack';
 
 export async function handlePriceUpdateEntry(payload: PriceStore) {
-  // update total price
   Object.assign(prices, payload);
 
   for (const user of Object.values(users)) {
-    user.trades.forEach((order) => {
+    for (const order of [...user.trades]) {
       const currentPrices = prices[order.asset];
       if (!currentPrices?.buyPrice || !currentPrices?.sellPrice) {
-        // there's no price data for this asset yet, skip it.
-        return;
+        continue;
       }
 
-      const { id, openPrice, quantity, side, stopLoss, takeProfit } = order;
-      let realizedPnl = 0;
+      const { id, side, stopLoss, takeProfit, margin } = order;
+      let pnlToRealize: number | null = null;
+      let closeReason: string | null = null;
+
+      const relevantPrice =
+        side === 'LONG' ? currentPrices.buyPrice : currentPrices.sellPrice;
 
       if (side === 'LONG') {
-        // stoploss
-        if (stopLoss && currentPrices.sellPrice <= stopLoss) {
-          realizedPnl = (stopLoss - openPrice) * quantity;
-          console.log('Stop loss triggered for long order', id);
+        if (stopLoss && relevantPrice <= stopLoss) {
+          pnlToRealize = calculatePnl(order, stopLoss);
+          closeReason = 'Stop Loss';
+        } else if (takeProfit && relevantPrice >= takeProfit) {
+          pnlToRealize = calculatePnl(order, takeProfit);
+          closeReason = 'Take Profit';
         }
-        // takeprofit
-        else if (takeProfit && currentPrices.sellPrice >= takeProfit) {
-          realizedPnl = (takeProfit - openPrice) * quantity;
-          console.log('take profit triggered for long order', id);
-        }
-      } else if (side === 'SHORT') {
-        // stoploss
-        if (stopLoss && currentPrices.buyPrice >= stopLoss) {
-          realizedPnl = (openPrice - stopLoss) * quantity;
-          console.log('Stop loss triggered for long order', id);
-        }
-        // takeprofit
-        else if (takeProfit && currentPrices.buyPrice >= takeProfit) {
-          realizedPnl = (openPrice - takeProfit) * quantity;
-          console.log('take profit triggered for long order', id);
+      } else {
+        // SHORT
+        if (stopLoss && relevantPrice >= stopLoss) {
+          pnlToRealize = calculatePnl(order, stopLoss);
+          closeReason = 'Stop Loss';
+        } else if (takeProfit && relevantPrice <= takeProfit) {
+          pnlToRealize = calculatePnl(order, takeProfit);
+          closeReason = 'Take Profit';
         }
       }
 
-      if (
-        order.margin &&
-        realizedPnl < 0 &&
-        Math.abs(realizedPnl) >= order.margin
-      ) {
-        // liquidate(order, liquidationPrice, unrealizedPnl);
-        return;
+      if (!closeReason) {
+        const unrealizedPnl = calculatePnl(order, relevantPrice);
+        if (margin && unrealizedPnl < 0 && Math.abs(unrealizedPnl) >= margin) {
+          pnlToRealize = unrealizedPnl;
+          closeReason = 'Liquidation';
+        }
       }
-    });
+
+      if (closeReason && pnlToRealize !== null) {
+        await closeOrder(user, id, pnlToRealize, closeReason);
+      }
+    }
   }
-
 }
 
 export async function handleUserCreation(
@@ -169,7 +166,36 @@ export async function handleCloseTrade(
       closedTradeId: closedTrade.id,
     });
   } catch (err) {
-    console.error('Error in handleCloseTrade:', err);
+    console.error('Error in closing trade:', err);
+    await sendAcknowledgement(requestId, 'trade-close-error', {
+      message: err,
+    });
+  }
+}
+
+export async function handleGetUserBalance(
+  payload: UserPayload,
+  requestId: string
+) {
+  try {
+    const { email } = payload;
+    const user = users[email];
+
+    if (!user) {
+      console.log(`Attempted to close trade for non-existent user: ${email}`);
+
+      await sendAcknowledgement(requestId, 'get-balance-failed', {
+        reason: 'User not found',
+      });
+      return;
+    }
+
+    await sendAcknowledgement(requestId, 'get-balance-acknowledgement', {
+      status: 'success',
+      balance: user.balance,
+    });
+  } catch (err) {
+    console.error('Error in getting user balance:', err);
     await sendAcknowledgement(requestId, 'trade-close-error', {
       message: err,
     });
