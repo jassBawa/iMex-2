@@ -7,9 +7,18 @@ export interface Trade {
   id: string;
   openPrice: number;
   closePrice?: number;
+
+  quantity: number;
   leverage: number;
-  pnl: number;
+  margin?: number;
+
+  stopLoss?:number;
+  takeProfit?:number;
+  pnl?: number;
+  
+  side: string;
   asset: AssetSymbols;
+  
   liquidated: boolean;
   createdAt: Date;
   closedAt?: Date;

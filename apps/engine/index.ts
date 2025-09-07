@@ -1,5 +1,10 @@
 import { createClient } from 'redis';
-import { handlePriceUpdateEntry, handleUserCreation } from './handlers';
+import {
+  handlePriceUpdateEntry,
+  handleOpenTrade,
+  handleUserCreation,
+  handleCloseTrade,
+} from './handlers';
 
 const client = createClient();
 
@@ -7,7 +12,7 @@ client.connect();
 
 client.on('connect', async () => {
   while (1) {
-    const response = await client.xRead(
+    const response = (await client.xRead(
       {
         key: 'trades',
         id: '$',
@@ -15,57 +20,38 @@ client.on('connect', async () => {
       {
         BLOCK: 0,
       }
-    );
+    )) as any[];
 
-    let messages;
     if (response) {
-      if (response[0]?.messages[0].message) {
-        messages = response[0]?.messages;
-      }
-    }
+      const requestId = response[0]?.messages[0]?.message.reqId;
+      const requestType = response[0]?.messages[0]?.message.type;
 
-    // console.log(name)
-    if (!messages || messages.length === 0) {
-      continue;
-    }
-
-
-    const payload = messages[0].message;
-    if (payload.type === 'PRICE_UPDATE') {
+      const payload = response[0].messages[0].message;
       const data = JSON.parse(payload.data);
-      handlePriceUpdateEntry(data);
-    } else if (payload.type === 'ORDER') {
       console.log(payload);
-      const data = JSON.parse(payload.data);
-      handleTradeExecution(data, payload.userId);
-    } else if (payload.type === 'USER_CREATED') {
-      const parsedData = JSON.parse(payload.data);
-      handleUserCreation(parsedData);
+
+      switch (requestType) {
+        case 'USER_CREATED':
+          handleUserCreation(data, requestId);
+          return;
+        case 'CREATE_ORDER':
+          handleOpenTrade(data, requestId);
+          return;
+        case 'CLOSE_ORDER':
+          handleCloseTrade(data, requestId);
+          return;
+        case 'PRICE_UPDATE':
+          handlePriceUpdateEntry(data);
+          return;
+        case 'GET_USER_BALANCE':
+        //todo: impl this
+          // handleGetUserBalance(data, requestId);
+          return;
+        case 'GET_USER_ASSET_BALANCE':
+          return;
+        default:
+          console.log('Irrelevant event recieved');
+      }
     }
   }
 });
-
-interface Trade {
-  id: string;
-  asset: string;
-  qty: number;
-  side: string;
-  leverage: number;
-}
-
-async function handleTradeExecution(data: Trade, userId: string) {
-  const order = {
-    ...data,
-    pnl: 1,
-    liquidated: false,
-  };
-
-  // business logic
-  // users[userId].trades.push(order as any)
-  // update user balance
-  //
-
-  client.xAdd('callback-queue', '*', {
-    id: data.id,
-  });
-}
