@@ -1,56 +1,89 @@
-import {
-  handleCloseTrade,
-  handleOpenTrade,
-  handlePriceUpdateEntry,
-} from './handlers';
-import {
-  handleGetUserBalance,
-  handleUserCreation,
-} from './handlers/user-handler';
+import { processMessage } from './handlers';
+import { prices, users } from './memoryDb';
+import { db } from './utils/dbClient';
 import { client } from './utils/redis-client';
 
-client.on('connect', async () => {
-  while (1) {
-    const response = (await client.xRead(
-      {
-        key: 'stream:engine',
-        id: '$',
-      },
-      {
-        BLOCK: 0,
-      }
-    )) as any[];
-    if (response) {
-      const requestId = response[0]?.messages[0]?.message.requestId;
-      const requestType = response[0]?.messages[0]?.message.type;
+const STREAM_KEY = 'stream:engine';
+const GROUP_NAME = 'group';
+const CONSUMER_NAME = 'consumer-1';
+const SNAPSHOT_INTERVAL = 10_000; // 10s
 
-      const payload = response[0].messages[0].message;
-      const data = JSON.parse(payload.data);
-      switch (requestType) {
-        case 'USER_CREATED':
-          handleUserCreation(data, requestId);
-          break;
-        case 'CREATE_ORDER':
-          handleOpenTrade(data, requestId);
-          break;
-        case 'CLOSE_ORDER':
-          handleCloseTrade(data, requestId);
-          break;
-        case 'PRICE_UPDATE':
-          handlePriceUpdateEntry(data);
-          break;
-        case 'GET_USER_BALANCE':
-          handleGetUserBalance(data, requestId);
-          break;
-        // case 'GET_USER_ASSET_BALANCE':
-        // return;
-        default:
-          console.log('Irrelevant event recieved');
-      }
-    }
+let lastSnapshotAt: number;
+let lastItemReadId = '';
+
+async function restoreSnapshot() {
+  const collection = db.collection('engine-snapshots');
+  const result = await collection.findOne({ id: 'dump' });
+
+  if (result) {
+    Object.assign(prices, result.data.prices);
+    Object.assign(users, result.data.users);
+    lastSnapshotAt = result.data.lastSnapshotAt;
+    lastItemReadId = result.data.lastItemReadId;
+    console.log('Restored snapshot from DB');
+  } else {
+    console.log('No snapshot found, starting fresh');
   }
-});
+}
+
+async function saveSnapshot() {
+  const now = Date.now();
+  if (now - lastSnapshotAt < SNAPSHOT_INTERVAL) return;
+
+  const collection = db.collection('engine-snapshots');
+  const snapshot = {
+    id: 'dump',
+    data: {
+      prices,
+      users,
+      lastSnapshotAt: now,
+      lastItemReadId,
+    },
+  };
+
+  await collection.updateOne(
+    { id: 'dump' },
+    { $set: snapshot },
+    { upsert: true }
+  );
+  console.log('Snapshot saved');
+  lastSnapshotAt = now;
+}
+
+async function startEngine() {
+  try {
+    await client.xGroupCreate(STREAM_KEY, GROUP_NAME, '0', { MKSTREAM: true });
+  } catch (err) {
+    console.log('Consumer group exists');
+  }
+
+  await restoreSnapshot();
+
+  while (true) {
+    if (lastItemReadId) {
+      await client.xAck(STREAM_KEY, GROUP_NAME, lastItemReadId);
+    }
+
+    const response = (await client.xReadGroup(
+      GROUP_NAME,
+      CONSUMER_NAME,
+      { key: STREAM_KEY, id: '>' },
+      { BLOCK: 0 }
+    )) as any[];
+
+    if (response) {
+      const msg = response[0].messages[0];
+      lastItemReadId = msg.id;
+
+      await processMessage(msg);
+    }
+
+    await saveSnapshot();
+  }
+}
+
+client.on('connect', startEngine);
 
 client.on('error', () => {
-  console.log('Redis connection closed due to some error');
+  console.log('Redis connection error');
 });
