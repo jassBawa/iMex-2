@@ -1,15 +1,11 @@
-import type { NextFunction, Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { signupSchema } from '../validations/signupSchema';
 import jwt from 'jsonwebtoken';
 import { sendEmail } from '../services/mail.service';
 import dbClient from '@imex/db';
 import { createUserInEngine } from '../services/engine.service';
 
-export async function signupHandler(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
+export async function signupHandler(req: Request, res: Response) {
   try {
     const { success, data, error } = signupSchema.safeParse(req.body);
 
@@ -68,7 +64,7 @@ export async function signInVerify(req: Request, res: Response) {
       return;
     }
 
-    const decodedToken = jwt.verify(token, process.env.JWT_SECRET!); // email;
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET!);
 
     if (!decodedToken) {
       res.status(400).json({ message: 'Invalid token' });

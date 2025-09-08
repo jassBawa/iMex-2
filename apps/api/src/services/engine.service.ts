@@ -17,3 +17,18 @@ export async function createUserInEngine(user: User) {
   await redisClient.xAdd('stream:engine', '*', payload);
   await redisSub.waitForMessage(requestId);
 }
+
+export async function getUserBalanceFromEngine(email: string) {
+  const requestId = Date.now().toString();
+  const payload = {
+    type: 'GET_USER_BALANCE',
+    requestId,
+    data: JSON.stringify({
+      email: email,
+    }),
+  };
+  await redisClient.xAdd('stream:engine', '*', payload);
+  const res = await redisSub.waitForMessage(requestId);
+
+  return res.balance;
+}
