@@ -1,44 +1,44 @@
 import type { Request, Response } from 'express';
-import { createClient } from 'redis';
 import { RedisSubscriber } from '../services/redis.service';
 import { closeOrderSchema, openOrderSchema } from '../validations/ordersSchema';
+import { redisClient } from '../lib/redisClient';
 
-const client = createClient();
+export const CREATE_ORDER_QUEUE = 'stream:engine';
 
-client.connect();
-
-export const CREATE_ORDER_QUEUE = 'trades';
-
-const redisSubscriber = new RedisSubscriber();
+const redisSubscriber = RedisSubscriber.getInstance();
 
 export async function createOrder(req: Request, res: Response) {
-  const parsedData = openOrderSchema.safeParse(req.body);
+  const { success, data, error } = openOrderSchema.safeParse(req.body);
 
-  if (!parsedData.success) {
-    res.status(400).json({ message: 'Invalid inputs ' });
+  if (!success) {
+    res.status(400).json({ error: error.flatten().fieldErrors });
     return;
   }
 
-  const { asset, leverage, quantity, slippage, type } = parsedData.data;
-
-  const requestId = Date.now().toString();
-
-  const data = JSON.stringify({
-    requestId,
-    asset,
-    quantity,
-    type,
-    leverage,
-    slippage,
-  });
-
-  await client.xAdd(CREATE_ORDER_QUEUE, '*', {
-    data,
-    kind: 'ORDER_UPDATE',
-    userId: 'jass',
-  });
-
+  const { asset, leverage, quantity, slippage, side, stopLoss, takeProfit } =
+    data;
   try {
+    const requestId = Date.now().toString();
+
+    const payload = {
+      type: 'CREATE_ORDER',
+      requestId: requestId,
+      data: JSON.stringify({
+        email: req.user,
+        trade: {
+          asset,
+          quantity,
+          side,
+          leverage,
+          slippage,
+          stopLoss,
+          takeProfit,
+        },
+      }),
+    };
+
+    await redisClient.xAdd(CREATE_ORDER_QUEUE, '*', payload);
+
     await redisSubscriber.waitForMessage(requestId);
 
     res.status(201).json({
@@ -46,6 +46,7 @@ export async function createOrder(req: Request, res: Response) {
       requestId: requestId,
     });
   } catch (err: any) {
+    console.log(err);
     res.status(411).json({
       message: 'Trade not placed',
     });
@@ -70,7 +71,7 @@ export async function closeOrder(req: Request, res: Response) {
     orderId,
   });
 
-  await client.xAdd(CREATE_ORDER_QUEUE, '*', {
+  await redisClient.xAdd(CREATE_ORDER_QUEUE, '*', {
     payload,
     kind: 'ORDER_UPDATE',
     userId: 'jass',

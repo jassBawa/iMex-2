@@ -1,6 +1,14 @@
 import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
+declare global {
+  namespace Express {
+    interface Request {
+      user: string;
+    }
+  }
+}
+
 export async function authMiddleware(
   req: Request,
   res: Response,
@@ -14,21 +22,21 @@ export async function authMiddleware(
       return;
     }
 
-    const isVerified = jwt.verify(authCookie, process.env.JWT_SECRET!);
+    const payload = jwt.verify(authCookie, process.env.JWT_SECRET!) as {
+      email: string;
+    };
 
-    if (!isVerified) {
+    if (!payload) {
       res.cookie('token', {});
       res.status(400).json({ message: 'Invalid Cookie' });
       return;
     }
 
-    next();
+    req.user = payload.email;
 
-    console.log(authCookie);
+    next();
   } catch (err) {
     console.log(err);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 }
-
-

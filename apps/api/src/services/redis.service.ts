@@ -1,32 +1,55 @@
 import { createClient, type RedisClientType } from 'redis';
 
-export const CALLBACK_QUEUE = 'callback-queue';
+export const ACKNOWLEDGEMENT_QUEUE = 'stream:engine:acknowledgement';
 export class RedisSubscriber {
+  private static instance: RedisSubscriber;
   private client: RedisClientType;
-  private callbacks: Record<string, () => void>;
+  private callbacks: Record<string, { resolve: any; reject: any }>;
 
-  constructor() {
+  private constructor() {
     this.client = createClient();
     this.client.connect();
+    this.callbacks = {};
     this.runLoop();
-    this.callbacks = {}
+  }
+
+  static getInstance(): RedisSubscriber {
+    if (!RedisSubscriber.instance) {
+      RedisSubscriber.instance = new RedisSubscriber();
+    }
+    return RedisSubscriber.instance;
   }
 
   async runLoop() {
-      while (1) {
+    while (1) {
       const response = await this.client.xRead(
         {
-          key: CALLBACK_QUEUE,
+          key: ACKNOWLEDGEMENT_QUEUE,
           id: '$',
         },
         { BLOCK: 0 }
       );
 
-      if(response){
-        if(response[0]?.messages[0].message){
-          const gotId = response[0]?.messages[0].message.id;
-          this.callbacks[gotId]();       
-          delete this.callbacks[gotId];
+      if (response) {
+        console.log('response', response[0].messages[0].message);
+        const message = response[0]?.messages[0].message;
+        const reqType = message.type;
+        const gotId = message.requestId;
+        const payload = JSON.parse(message.payload);
+        console.log(reqType, gotId);
+        console.log(this.callbacks);
+        console.log(this.callbacks[gotId]);
+
+        switch (reqType) {
+          case 'USER_CREATED_SUCCESS':
+            this.callbacks[gotId]!.resolve(payload);
+            delete this.callbacks[gotId];
+            break;
+
+          case 'USER_CREATION_FAILED':
+          case 'USER_CREATION_ERROR':
+            this.callbacks[gotId]!.reject(message);
+            break;
         }
       }
 
@@ -35,20 +58,16 @@ export class RedisSubscriber {
   }
 
   waitForMessage(callbackId: string) {
-    return new Promise((resolve, reject) => {
-        
-        // making the resolve function accessible
-        // @ts-ignore
-        this.callbacks[callbackId] = resolve;
-
-        setTimeout(() => {
-
-            // rejecting if not process in 5 seconds
-            if(this.callbacks[callbackId]){
-              delete this.callbacks[callbackId];
-                reject();
-            }
-        }, 3500);
-    })
+    return new Promise<void>((resolve, reject) => {
+      // making the resolve function accessible
+      this.callbacks[callbackId] = { resolve, reject };
+      setTimeout(() => {
+        // rejecting if not process in 5 seconds
+        if (this.callbacks[callbackId]) {
+          delete this.callbacks[callbackId];
+          reject();
+        }
+      }, 3500);
+    });
   }
 }

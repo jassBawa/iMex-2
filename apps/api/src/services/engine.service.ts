@@ -1,16 +1,19 @@
 import type { User } from '@prisma/client';
-import { createClient } from 'redis';
+import { redisClient } from '../lib/redisClient';
+import { RedisSubscriber } from './redis.service';
 
-const client = createClient();
-await client.connect()
+const redisSub = RedisSubscriber.getInstance();
 
 export async function createUserInEngine(user: User) {
-  await client.xAdd('trades', '*', {
+  const requestId = Date.now().toString();
+  const payload = {
     type: 'USER_CREATED',
+    requestId,
     data: JSON.stringify({
-
-        email: user.email,
-        id: user.id,
-    })
-  });
+      email: user.email,
+      id: user.id,
+    }),
+  };
+  await redisClient.xAdd('stream:engine', '*', payload);
+  await redisSub.waitForMessage(requestId);
 }

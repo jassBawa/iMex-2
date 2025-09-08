@@ -22,21 +22,20 @@ export async function signupHandler(
       expiresIn: '5m',
     });
 
-    const isUserAvailable = await dbClient.user.findFirst({
+    let user = await dbClient.user.findFirst({
       where: {
         email,
       },
     });
 
-    if (!isUserAvailable) {
-      const user = await dbClient.user.create({
+    if (!user) {
+      user = await dbClient.user.create({
         data: {
           email: email,
           lastLoggedIn: new Date(),
         },
       });
-
-      await createUserInEngine(user);
+      createUserInEngine(user);
     }
 
     // if (process.env.NODE_ENV === 'production') {
@@ -45,6 +44,7 @@ export async function signupHandler(
     //     res.status(400).json({ error });
     //   }
     // } else {
+    console.log('we know this con');
     console.log(
       `http://localhost:4000/api/v1/auth/signin/verify?token=${token}`
     );
@@ -76,11 +76,12 @@ export async function signInVerify(req: Request, res: Response) {
       return;
     }
 
-    const sessionToken = jwt.sign(
-      { email: decodedToken },
-      process.env.JWT_SECRET!,
-      { expiresIn: '2d' }
-    );
+    const { email } = decodedToken as { email: string };
+
+    console.log(decodedToken);
+    const sessionToken = jwt.sign({ email }, process.env.JWT_SECRET!, {
+      expiresIn: '2d',
+    });
 
     res.cookie('token', sessionToken, {
       httpOnly: true,
