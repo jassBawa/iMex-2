@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { RedisSubscriber } from '../services/redis.service';
 import { closeOrderSchema, openOrderSchema } from '../validations/ordersSchema';
 import { redisClient } from '../lib/redisClient';
+import { randomUUID } from 'crypto';
 
 export const CREATE_ORDER_QUEUE = 'stream:engine';
 
@@ -26,6 +27,7 @@ export async function createOrder(req: Request, res: Response) {
       data: JSON.stringify({
         email: req.user,
         trade: {
+          id: randomUUID(),
           asset,
           quantity,
           side,
@@ -39,54 +41,54 @@ export async function createOrder(req: Request, res: Response) {
 
     await redisClient.xAdd(CREATE_ORDER_QUEUE, '*', payload);
 
-    await redisSubscriber.waitForMessage(requestId);
+    const { openedTradeId } = await redisSubscriber.waitForMessage(requestId);
+    console.log(openedTradeId);
 
     res.status(201).json({
       message: 'Order placed',
-      requestId: requestId,
+      orderId: openedTradeId,
     });
   } catch (err: any) {
     console.log(err);
-    res.status(411).json({
-      message: 'Trade not placed',
+    res.status(500).json({
+      message: 'Something went wrong',
     });
   }
 }
 
 export async function closeOrder(req: Request, res: Response) {
-  const startTime = Date.now();
-
   const { success, data } = closeOrderSchema.safeParse(req.body);
 
   if (!success) {
-    res.status(400).json({ message: 'Order id missing ' });
+    res.status(400).json({ message: 'Orderid id missing ' });
     return;
   }
 
   const { orderId } = data;
 
   const requestId = Date.now().toString();
-  const payload = JSON.stringify({
-    requestId,
-    orderId,
-  });
 
-  await redisClient.xAdd(CREATE_ORDER_QUEUE, '*', {
-    payload,
-    kind: 'ORDER_UPDATE',
-    userId: 'jass',
-  });
+  const payload = {
+    type: 'CLOSE_ORDER',
+    requestId: requestId,
+    data: JSON.stringify({
+      email: req.user,
+      orderId: orderId,
+    }),
+  };
+
+  await redisClient.xAdd(CREATE_ORDER_QUEUE, '*', payload);
 
   try {
-    await redisSubscriber.waitForMessage(requestId);
+    const { status, reason } = await redisSubscriber.waitForMessage(requestId);
 
     res.status(201).json({
-      message: 'Order placed',
-      time: Date.now() - startTime,
+      message: 'Order closed',
     });
   } catch (err: any) {
-    res.status(411).json({
-      message: 'Trade not placed',
+    console.log('err', err);
+    res.status(500).json({
+      message: 'Something went wrong: ' + err.reason,
     });
   }
 }

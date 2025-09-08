@@ -37,18 +37,26 @@ export class RedisSubscriber {
         const gotId = message.requestId;
         const payload = JSON.parse(message.payload);
         console.log(reqType, gotId);
-        console.log(this.callbacks);
         console.log(this.callbacks[gotId]);
 
         switch (reqType) {
           case 'USER_CREATED_SUCCESS':
+          case 'TRADE_OPEN_ACKNOWLEDGEMENT':
+          case 'TRADE_CLOSE_ACKNOWLEDGEMENT':
+          case 'GET_BALANCE_ACKNOWLEDGEMENT':
             this.callbacks[gotId]!.resolve(payload);
             delete this.callbacks[gotId];
             break;
 
           case 'USER_CREATION_FAILED':
           case 'USER_CREATION_ERROR':
-            this.callbacks[gotId]!.reject(message);
+          case 'TRADE_OPEN_FAILED':
+          case 'TRADE_OPEN_ERROR':
+          case 'GET_BALANCE_FAILED':
+          case 'GET_BALANCE_ERROR':
+          case 'TRADE_CLOSE_FAILED':
+            this.callbacks[gotId]!.reject(payload);
+            delete this.callbacks[gotId];
             break;
         }
       }
@@ -58,7 +66,7 @@ export class RedisSubscriber {
   }
 
   waitForMessage(callbackId: string) {
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<any>((resolve, reject) => {
       // making the resolve function accessible
       this.callbacks[callbackId] = { resolve, reject };
       setTimeout(() => {

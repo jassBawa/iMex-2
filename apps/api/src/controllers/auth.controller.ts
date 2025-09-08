@@ -44,7 +44,6 @@ export async function signupHandler(
     //     res.status(400).json({ error });
     //   }
     // } else {
-    console.log('we know this con');
     console.log(
       `http://localhost:4000/api/v1/auth/signin/verify?token=${token}`
     );
@@ -78,7 +77,6 @@ export async function signInVerify(req: Request, res: Response) {
 
     const { email } = decodedToken as { email: string };
 
-    console.log(decodedToken);
     const sessionToken = jwt.sign({ email }, process.env.JWT_SECRET!, {
       expiresIn: '2d',
     });
