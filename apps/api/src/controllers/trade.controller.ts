@@ -41,12 +41,11 @@ export async function createOrder(req: Request, res: Response) {
 
     await redisClient.xAdd(CREATE_ORDER_QUEUE, '*', payload);
 
-    const { openedTradeId } = await redisSubscriber.waitForMessage(requestId);
-    console.log(openedTradeId);
+    const { tradeDetails } = await redisSubscriber.waitForMessage(requestId);
 
     res.status(201).json({
       message: 'Order placed',
-      orderId: openedTradeId,
+      trade: tradeDetails,
     });
   } catch (err: any) {
     console.log(err);

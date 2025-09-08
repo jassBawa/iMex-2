@@ -1,10 +1,12 @@
 import {
   handleCloseTrade,
-  handleGetUserBalance,
   handleOpenTrade,
   handlePriceUpdateEntry,
-  handleUserCreation,
 } from './handlers';
+import {
+  handleGetUserBalance,
+  handleUserCreation,
+} from './handlers/user-handler';
 import { client } from './utils/redis-client';
 
 client.on('connect', async () => {

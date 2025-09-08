@@ -10,16 +10,16 @@ export interface Trade {
 
   quantity: number;
   leverage: number;
-  margin?: number;
+  margin: number;
+  status?: 'OPEN' | 'CLOSED';
 
-  stopLoss?:number;
-  takeProfit?:number;
-  pnl?: number;
-  
+  stopLoss?: number;
+  takeProfit?: number;
+
   side: string;
   asset: AssetSymbols;
-  
-  liquidated: boolean;
+
+  pnl?: number;
   createdAt: Date;
   closedAt?: Date;
 }

@@ -1,4 +1,7 @@
-import { client } from './redis-client';
+import { createClient } from 'redis';
+
+const client = createClient();
+await client.connect();
 
 export const ACKNOWLEDGEMENT_STREAM = 'stream:engine:acknowledgement';
 
