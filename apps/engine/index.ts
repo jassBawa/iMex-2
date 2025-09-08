@@ -11,7 +11,7 @@ client.on('connect', async () => {
   while (1) {
     const response = (await client.xRead(
       {
-        key: 'trades',
+        key: 'stream:engine',
         id: '$',
       },
       {
@@ -19,7 +19,7 @@ client.on('connect', async () => {
       }
     )) as any[];
     if (response) {
-      const requestId = response[0]?.messages[0]?.message.reqId;
+      const requestId = response[0]?.messages[0]?.message.requestId;
       const requestType = response[0]?.messages[0]?.message.type;
 
       const payload = response[0].messages[0].message;

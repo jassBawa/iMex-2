@@ -81,21 +81,21 @@ export async function handleUserCreation(
       users[payload.email] = newUser;
       console.log(`Success: ${payload.email}`);
 
-      await sendAcknowledgement(requestId, 'user-created-success', {
+      await sendAcknowledgement(requestId, 'USER_CREATED_SUCCESS', {
         status: 'success',
         userId: newUser.id,
       });
     } else {
       console.log(`User already exists with email: ${payload.email}`);
 
-      await sendAcknowledgement(requestId, 'user-creation-failed', {
+      await sendAcknowledgement(requestId, 'USER_CREATION_FAILED', {
         reason: 'User already exists',
         email: payload.email,
       });
     }
   } catch (err) {
     console.error('Error in handleUserCreation:', err);
-    await sendAcknowledgement(requestId, 'user-creation-error', {
+    await sendAcknowledgement(requestId, 'USER_CREATION_ERROR', {
       message: err,
     });
   }
@@ -112,21 +112,20 @@ export async function handleOpenTrade(
 
     if (!user) {
       console.log(`Attempted to open trade for non-existent user: ${email}`);
-      await sendAcknowledgement(requestId, 'trade-open-failed', {
+      await sendAcknowledgement(requestId, 'TRADE_OPEN_FAILED', {
         reason: 'User not found',
       });
-      return;
     }
 
     user.trades.push(trade);
 
-    await sendAcknowledgement(requestId, 'trade-open-acknowledgement', {
+    await sendAcknowledgement(requestId, 'TRADE_OPEN_ACKNOWLEDGEMENT', {
       status: 'success',
       openedTradeId: trade.id,
     });
   } catch (err) {
     console.error('Error in handleOpenTrade:', err);
-    await sendAcknowledgement(requestId, 'trade-open-error', { message: err });
+    await sendAcknowledgement(requestId, 'TRADE_OPEN_ERROR', { message: err });
   }
 }
 
@@ -141,17 +140,16 @@ export async function handleCloseTrade(
     if (!user) {
       console.log(`Attempted to close trade for non-existent user: ${email}`);
 
-      await sendAcknowledgement(requestId, 'trade-close-failed', {
+      await sendAcknowledgement(requestId, 'TRADE_CLOSE_FAILED', {
         reason: 'User not found',
       });
       return;
     }
-
     const tradeIndex = user.trades.findIndex((trade) => trade.id === orderId);
 
     if (tradeIndex === -1) {
       console.log(`Trade with ID ${orderId} not found `);
-      await sendAcknowledgement(requestId, 'trade-close-failed', {
+      await sendAcknowledgement(requestId, 'TRADE_CLOSE_FAILED', {
         reason: 'Trade not found',
       });
       return;
@@ -161,13 +159,13 @@ export async function handleCloseTrade(
 
     console.log(`Successfully closed trade ${orderId}`);
 
-    await sendAcknowledgement(requestId, 'trade-close-acknowledgement', {
+    await sendAcknowledgement(requestId, 'TRADE_CLOSE_ACKNOWLEDGEMENT', {
       status: 'success',
       closedTradeId: closedTrade.id,
     });
   } catch (err) {
     console.error('Error in closing trade:', err);
-    await sendAcknowledgement(requestId, 'trade-close-error', {
+    await sendAcknowledgement(requestId, 'TRADE_CLOSE_ERROR', {
       message: err,
     });
   }
@@ -184,19 +182,19 @@ export async function handleGetUserBalance(
     if (!user) {
       console.log(`Attempted to close trade for non-existent user: ${email}`);
 
-      await sendAcknowledgement(requestId, 'get-balance-failed', {
+      await sendAcknowledgement(requestId, 'GET_BALANCE_FAILED', {
         reason: 'User not found',
       });
       return;
     }
 
-    await sendAcknowledgement(requestId, 'get-balance-acknowledgement', {
+    await sendAcknowledgement(requestId, 'GET_BALANCE_ACKNOWLEDGEMENT', {
       status: 'success',
       balance: user.balance,
     });
   } catch (err) {
     console.error('Error in getting user balance:', err);
-    await sendAcknowledgement(requestId, 'trade-close-error', {
+    await sendAcknowledgement(requestId, 'GET_BALANCE_ERROR', {
       message: err,
     });
   }
