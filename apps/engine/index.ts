@@ -59,6 +59,17 @@ async function startEngine() {
 
   await restoreSnapshot();
 
+  const groups = await client.xInfoGroups(STREAM_KEY);
+  const lastDeliveredId = groups[0]?.['last-delivered-id']?.toString();
+
+  if (
+    lastDeliveredId &&
+    lastItemReadId !== '' &&
+    lastItemReadId !== lastDeliveredId
+  ) {
+    await replay(lastItemReadId, lastDeliveredId);
+  }
+
   while (true) {
     if (lastItemReadId) {
       await client.xAck(STREAM_KEY, GROUP_NAME, lastItemReadId);
@@ -87,3 +98,20 @@ client.on('connect', startEngine);
 client.on('error', () => {
   console.log('Redis connection error');
 });
+
+async function replay(fromId: string, toId: string) {
+  const entries = await client.xRange(STREAM_KEY, fromId, toId);
+  const missed = entries.slice(1);
+
+  for (const entry of missed) {
+    try {
+      const msg = entry.message;
+      // to be fixed: dont' send acknolwedgmenet here
+      await processMessage(msg);
+
+      lastItemReadId = entry.id;
+    } catch (err) {
+      console.error('Replay failed', err);
+    }
+  }
+}
