@@ -2,6 +2,7 @@ import {
   handleOpenTrade,
   handleCloseTrade,
   handlePriceUpdateEntry,
+  handleFetchOpenOrders,
 } from './order-handler';
 import { handleGetUserBalance, handleUserCreation } from './user-handler';
 
@@ -25,6 +26,9 @@ export async function processMessage(message: any) {
       break;
     case 'GET_USER_BALANCE':
       handleGetUserBalance(payload, requestId);
+      break;
+    case 'FETCH_OPEN_ORDERS':
+      handleFetchOpenOrders(payload, requestId);
       break;
     default:
       console.log('Irrelevant event received');

@@ -1,11 +1,14 @@
+import prisma from '@imex/db';
 import { prices, users } from '../memoryDb';
+import { calculatePnl, closeOrder } from '../utils/liquidation-utils';
+import { sendAcknowledgement } from '../utils/send-ack';
+
 import type { PriceStore, Trade } from '../types';
 import type {
   CloseOrderPayload,
+  FetchOpenOrdersPayload,
   OpenTradePayload,
 } from '../types/handler.types';
-import { calculatePnl, closeOrder } from '../utils/liquidation-utils';
-import { sendAcknowledgement } from '../utils/send-ack';
 
 export async function handlePriceUpdateEntry(payload: PriceStore) {
   // update in memory price
@@ -155,7 +158,7 @@ export async function handleCloseTrade(
       return;
     }
 
-    const { asset, side, openPrice, quantity, margin } = tradeToClose;
+    const { asset, side, openPrice, quantity, margin, leverage } = tradeToClose;
 
     const currentPrice = prices[asset];
     if (!currentPrice) {
@@ -175,6 +178,7 @@ export async function handleCloseTrade(
       pnl = (openPrice - closePrice) * quantity;
     }
 
+    // todo: remove from memory
     user.balance.amount += margin + pnl;
     tradeToClose.status = 'CLOSED';
     tradeToClose.closePrice = closePrice;
@@ -183,15 +187,68 @@ export async function handleCloseTrade(
 
     console.log(`Successfully closed trade ${orderId}. PnL: ${pnl}`);
 
-    // todo: add to db
+    // todo: update to single db call
+    await prisma.existingTrade.create({
+      data: {
+        userId: user.id,
+        asset: asset,
+        openPrice: openPrice,
+        closePrice: closePrice,
+        leverage: leverage,
+        pnl: pnl,
+        liquidated: true,
+        createdAt: new Date(),
+      },
+    });
+
+    await prisma.user.update({
+      where: {
+        email: user.email,
+      },
+      data: {
+        balance: {
+          increment: pnl,
+        },
+      },
+    });
 
     await sendAcknowledgement(requestId, 'TRADE_CLOSE_ACKNOWLEDGEMENT', {
       status: 'success',
-      tradeDetails: tradeToClose,
     });
   } catch (err) {
     console.error('Error in closing trade:', err);
     await sendAcknowledgement(requestId, 'TRADE_CLOSE_ERROR', {
+      message: err,
+    });
+  }
+}
+
+export async function handleFetchOpenOrders(
+  payload: FetchOpenOrdersPayload,
+  requestId: string
+) {
+  try {
+    const { email } = payload;
+    const user = users[email];
+
+    if (!user) {
+      console.log(
+        `Attempted to fetch open trades for non-existent user: ${email}`
+      );
+      await sendAcknowledgement(requestId, 'TRADE_FETCH_FAILED', {
+        reason: 'User not found',
+      });
+    }
+
+    const openTrades = user.trades.filter((trade) => trade.status === 'OPEN');
+
+    await sendAcknowledgement(requestId, 'TRADE_FETCH_ACKNOWLEDGEMENT', {
+      status: 'success',
+      trades: openTrades,
+    });
+  } catch (err) {
+    console.error('Error in handleFetchOpenOrders:', err);
+    await sendAcknowledgement(requestId, 'SOMETHING_WENT_WRONG', {
       message: err,
     });
   }

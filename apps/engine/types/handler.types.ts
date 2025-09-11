@@ -18,3 +18,7 @@ export interface OpenTradePayload {
 export interface UserPayload {
   email: string;
 }
+
+export interface FetchOpenOrdersPayload {
+  email: string;
+}

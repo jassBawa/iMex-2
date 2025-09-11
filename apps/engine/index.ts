@@ -1,18 +1,18 @@
 import { processMessage } from './handlers';
 import { prices, users } from './memoryDb';
-import { db } from './utils/dbClient';
+import { mongodb } from './utils/dbClient';
 import { client } from './utils/redis-client';
 
 const STREAM_KEY = 'stream:engine';
 const GROUP_NAME = 'group';
 const CONSUMER_NAME = 'consumer-1';
-const SNAPSHOT_INTERVAL = 10_000; // 10s
+const SNAPSHOT_INTERVAL = 15_000; // 10s
 
 let lastSnapshotAt: number;
 let lastItemReadId = '';
 
 async function restoreSnapshot() {
-  const collection = db.collection('engine-snapshots');
+  const collection = mongodb.collection('engine-snapshots');
   const result = await collection.findOne({ id: 'dump' });
 
   if (result) {
@@ -23,14 +23,17 @@ async function restoreSnapshot() {
     console.log('Restored snapshot from DB');
   } else {
     console.log('No snapshot found, starting fresh');
+    lastSnapshotAt = Date.now();
   }
+  console.log(prices, users);
 }
 
 async function saveSnapshot() {
   const now = Date.now();
   if (now - lastSnapshotAt < SNAPSHOT_INTERVAL) return;
 
-  const collection = db.collection('engine-snapshots');
+  const collection = mongodb.collection('engine-snapshots');
+  console.log(users);
   const snapshot = {
     id: 'dump',
     data: {
@@ -93,12 +96,7 @@ async function startEngine() {
   }
 }
 
-client.on('connect', startEngine);
-
-client.on('error', () => {
-  console.log('Redis connection error');
-});
-
+// todo
 async function replay(fromId: string, toId: string) {
   const entries = await client.xRange(STREAM_KEY, fromId, toId);
   const missed = entries.slice(1);
@@ -107,7 +105,7 @@ async function replay(fromId: string, toId: string) {
     try {
       const msg = entry.message;
       // to be fixed: dont' send acknolwedgmenet here
-      await processMessage(msg);
+      // await processMessage(msg);
 
       lastItemReadId = entry.id;
     } catch (err) {
@@ -115,3 +113,9 @@ async function replay(fromId: string, toId: string) {
     }
   }
 }
+
+client.on('connect', startEngine);
+
+client.on('error', () => {
+  console.log('Redis connection error');
+});
