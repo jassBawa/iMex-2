@@ -60,18 +60,18 @@ async function startEngine() {
     console.log('Consumer group exists');
   }
 
-  await restoreSnapshot();
+  // await restoreSnapshot();
 
-  const groups = await client.xInfoGroups(STREAM_KEY);
-  const lastDeliveredId = groups[0]?.['last-delivered-id']?.toString();
+  // const groups = await client.xInfoGroups(STREAM_KEY);
+  // const lastDeliveredId = groups[0]?.['last-delivered-id']?.toString();
 
-  if (
-    lastDeliveredId &&
-    lastItemReadId !== '' &&
-    lastItemReadId !== lastDeliveredId
-  ) {
-    await replay(lastItemReadId, lastDeliveredId);
-  }
+  // if (
+  //   lastDeliveredId &&
+  //   lastItemReadId !== '' &&
+  //   lastItemReadId !== lastDeliveredId
+  // ) {
+  //   await replay(lastItemReadId, lastDeliveredId);
+  // }
 
   while (true) {
     if (lastItemReadId) {
@@ -92,8 +92,8 @@ async function startEngine() {
       await processMessage(msg);
     }
 
-    await saveSnapshot();
   }
+  // await saveSnapshot();
 }
 
 // todo

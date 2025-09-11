@@ -44,7 +44,7 @@ export async function handleUserCreation(
         id: payload.id,
         email: payload.email,
         balance: {
-          amount: 5000,
+          amount: payload.balance,
           currency: 'USD',
         },
         trades: [],

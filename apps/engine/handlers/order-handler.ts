@@ -15,7 +15,6 @@ export async function handlePriceUpdateEntry(payload: PriceStore) {
   Object.assign(prices, payload);
 
   for (const user of Object.values(users)) {
-    // todo: update logic according to new one
     for (const order of [...user.trades]) {
       const currentPrices = prices[order.asset];
       if (!currentPrices?.buyPrice || !currentPrices?.sellPrice) {
@@ -33,18 +32,22 @@ export async function handlePriceUpdateEntry(payload: PriceStore) {
         if (stopLoss && relevantPrice <= stopLoss) {
           pnlToRealize = calculatePnl(order, stopLoss);
           closeReason = 'Stop Loss';
+          await closeOrder(user, id, pnlToRealize, closeReason, currentPrices);
         } else if (takeProfit && relevantPrice >= takeProfit) {
           pnlToRealize = calculatePnl(order, takeProfit);
           closeReason = 'Take Profit';
+          await closeOrder(user, id, pnlToRealize, closeReason, currentPrices);
         }
       } else {
         // SHORT
         if (stopLoss && relevantPrice >= stopLoss) {
           pnlToRealize = calculatePnl(order, stopLoss);
           closeReason = 'Stop Loss';
+          await closeOrder(user, id, pnlToRealize, closeReason, currentPrices);
         } else if (takeProfit && relevantPrice <= takeProfit) {
           pnlToRealize = calculatePnl(order, takeProfit);
           closeReason = 'Take Profit';
+          await closeOrder(user, id, pnlToRealize, closeReason, currentPrices);
         }
       }
 
@@ -53,11 +56,12 @@ export async function handlePriceUpdateEntry(payload: PriceStore) {
         if (margin && unrealizedPnl < 0 && Math.abs(unrealizedPnl) >= margin) {
           pnlToRealize = unrealizedPnl;
           closeReason = 'Liquidation';
+          await closeOrder(user, id, pnlToRealize, closeReason, currentPrices);
         }
       }
 
       if (closeReason && pnlToRealize !== null) {
-        await closeOrder(user, id, pnlToRealize, closeReason);
+        await closeOrder(user, id, pnlToRealize, closeReason, currentPrices);
       }
     }
   }
@@ -78,8 +82,17 @@ export async function handleOpenTrade(
         reason: 'User not found',
       });
     }
-
-    const { asset, leverage, side, quantity, id, stopLoss, takeProfit } = trade;
+    const {
+      asset,
+      leverage,
+      side,
+      quantity,
+      id,
+      stopLoss,
+      takeProfit,
+      slippage,
+      tradeOpeningPrice,
+    } = trade;
 
     const currentPrice = prices[asset];
     if (!currentPrice) {
@@ -91,8 +104,22 @@ export async function handleOpenTrade(
     }
 
     const openPrice =
-      side === 'LONG' ? currentPrice.buyPrice : currentPrice.sellPrice;
-    const marginRequired = (quantity * openPrice) / leverage;
+      side === 'LONG'
+        ? currentPrice.buyPrice / 10 ** currentPrice.decimal
+        : currentPrice.sellPrice / 10 ** currentPrice.decimal;
+
+    const slippedValue =
+      Math.abs((tradeOpeningPrice - openPrice) / openPrice) * 100;
+
+    console.log('slippedValue', slippedValue);
+
+    if (slippedValue > slippage / 100) {
+      await sendAcknowledgement(requestId, 'TRADE_SLIPPAGE_MAX_EXCEEDED', {
+        message: 'Price changed by alot',
+      });
+      return;
+    }
+    const marginRequired = quantity * openPrice;
 
     if (user.balance.amount < marginRequired) {
       await sendAcknowledgement(requestId, 'TRADE_OPEN_FAILED', {
@@ -104,7 +131,7 @@ export async function handleOpenTrade(
     }
 
     user.balance.amount -= marginRequired;
-
+    console.log(user.balance);
     const newTrade: Trade = {
       id,
       asset,
@@ -117,6 +144,8 @@ export async function handleOpenTrade(
       stopLoss,
       takeProfit,
       createdAt: new Date(),
+      tradeOpeningPrice: tradeOpeningPrice,
+      slippage: slippage / 100,
     };
 
     user.trades.push(newTrade);
@@ -158,7 +187,8 @@ export async function handleCloseTrade(
       return;
     }
 
-    const { asset, side, openPrice, quantity, margin, leverage } = tradeToClose;
+    const { asset, side, openPrice, quantity, margin, leverage, slippage } =
+      tradeToClose;
 
     const currentPrice = prices[asset];
     if (!currentPrice) {
@@ -169,7 +199,9 @@ export async function handleCloseTrade(
     }
 
     const closePrice =
-      side === 'LONG' ? currentPrice.sellPrice : currentPrice.buyPrice;
+      side === 'LONG'
+        ? currentPrice.sellPrice / 10 ** currentPrice.decimal
+        : currentPrice.buyPrice / 10 ** currentPrice.decimal;
 
     let pnl = 0;
     if (side === 'LONG') {
@@ -179,15 +211,14 @@ export async function handleCloseTrade(
     }
 
     // todo: remove from memory
-    user.balance.amount += margin + pnl;
+    user.balance.amount += margin + pnl * leverage;
     tradeToClose.status = 'CLOSED';
     tradeToClose.closePrice = closePrice;
-    tradeToClose.pnl = pnl;
+    tradeToClose.pnl = pnl * leverage;
     tradeToClose.closedAt = new Date();
 
     console.log(`Successfully closed trade ${orderId}. PnL: ${pnl}`);
 
-    // todo: update to single db call
     await prisma.existingTrade.create({
       data: {
         userId: user.id,
@@ -198,6 +229,7 @@ export async function handleCloseTrade(
         pnl: pnl,
         liquidated: true,
         createdAt: new Date(),
+        slippage: slippage,
       },
     });
 
@@ -206,11 +238,11 @@ export async function handleCloseTrade(
         email: user.email,
       },
       data: {
-        balance: {
-          increment: pnl,
-        },
+        balance: user.balance.amount,
       },
     });
+
+    user.trades = user.trades.filter((trade) => trade.id !== orderId);
 
     await sendAcknowledgement(requestId, 'TRADE_CLOSE_ACKNOWLEDGEMENT', {
       status: 'success',
@@ -230,7 +262,6 @@ export async function handleFetchOpenOrders(
   try {
     const { email } = payload;
     const user = users[email];
-
     if (!user) {
       console.log(
         `Attempted to fetch open trades for non-existent user: ${email}`
@@ -240,11 +271,11 @@ export async function handleFetchOpenOrders(
       });
     }
 
-    const openTrades = user.trades.filter((trade) => trade.status === 'OPEN');
-
+    const orders = user.trades.filter((trade) => trade.status === 'OPEN');
+    console.log(orders);
     await sendAcknowledgement(requestId, 'TRADE_FETCH_ACKNOWLEDGEMENT', {
       status: 'success',
-      trades: openTrades,
+      orders: orders,
     });
   } catch (err) {
     console.error('Error in handleFetchOpenOrders:', err);

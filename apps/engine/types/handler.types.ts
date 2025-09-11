@@ -3,6 +3,7 @@ import type { Trade } from '.';
 export interface UserCreated {
   email: string;
   id: string;
+  balance: number;
 }
 
 export interface CloseOrderPayload {

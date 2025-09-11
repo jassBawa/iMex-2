@@ -15,6 +15,8 @@ export interface Trade {
 
   stopLoss?: number;
   takeProfit?: number;
+  tradeOpeningPrice: number;
+  slippage: number;
 
   side: string;
   asset: AssetSymbols;
