@@ -3,7 +3,6 @@ import { getUserBalanceFromEngine } from '../services/engine.service';
 
 export async function getUserBalance(req: Request, res: Response) {
   try {
-    console.log(req.user);
     const email = req.user;
 
     if (!email) {
@@ -12,7 +11,6 @@ export async function getUserBalance(req: Request, res: Response) {
     }
 
     const balance = await getUserBalanceFromEngine(req.user);
-    console.log(balance);
     res.status(200).json({
       balance: balance,
     });

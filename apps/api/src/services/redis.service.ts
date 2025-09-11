@@ -31,19 +31,17 @@ export class RedisSubscriber {
       );
 
       if (response) {
-        console.log('response', response[0].messages[0].message);
         const message = response[0]?.messages[0].message;
         const reqType = message.type;
         const gotId = message.requestId;
         const payload = JSON.parse(message.payload);
-        console.log(reqType, gotId);
-        console.log(this.callbacks[gotId]);
 
         switch (reqType) {
           case 'USER_CREATED_SUCCESS':
           case 'TRADE_OPEN_ACKNOWLEDGEMENT':
           case 'TRADE_CLOSE_ACKNOWLEDGEMENT':
           case 'GET_BALANCE_ACKNOWLEDGEMENT':
+          case 'TRADE_FETCH_ACKNOWLEDGEMENT':
             this.callbacks[gotId]!.resolve(payload);
             delete this.callbacks[gotId];
             break;
@@ -55,6 +53,10 @@ export class RedisSubscriber {
           case 'GET_BALANCE_FAILED':
           case 'GET_BALANCE_ERROR':
           case 'TRADE_CLOSE_FAILED':
+          case 'TRADE_SLIPPAGE_MAX_EXCEEDED':
+          case 'GET_BALANCE_FAILED':
+          case 'TRADE_FETCH_FAILED':
+          case 'SOMETHING_WENT_WRONG':
             this.callbacks[gotId]!.reject(payload);
             delete this.callbacks[gotId];
             break;

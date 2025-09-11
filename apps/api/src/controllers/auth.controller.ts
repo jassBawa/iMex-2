@@ -1,9 +1,10 @@
-import type { Request, Response } from 'express';
-import { signupSchema } from '../validations/signupSchema';
-import jwt from 'jsonwebtoken';
-import { sendEmail } from '../services/mail.service';
 import dbClient from '@imex/db';
+import jwt from 'jsonwebtoken';
+import type { Request, Response } from 'express';
+
 import { createUserInEngine } from '../services/engine.service';
+import { sendEmail } from '../utils';
+import { signupSchema } from '../validations/signupSchema';
 
 export async function signupHandler(req: Request, res: Response) {
   try {
@@ -29,21 +30,22 @@ export async function signupHandler(req: Request, res: Response) {
         data: {
           email: email,
           lastLoggedIn: new Date(),
+          balance: 5000,
         },
       });
       createUserInEngine(user);
     }
 
-    // if (process.env.NODE_ENV === 'production') {
-    //   const { error } = await sendEmail(email, token);
-    //   if (error) {
-    //     res.status(400).json({ error });
-    //   }
-    // } else {
-    console.log(
-      `http://localhost:4000/api/v1/auth/signin/verify?token=${token}`
-    );
-    // }
+    if (process.env.NODE_ENV === 'production') {
+      const { error } = await sendEmail(email, token);
+      if (error) {
+        res.status(400).json({ error });
+      }
+    } else {
+      console.log(
+        `http://localhost:4000/api/v1/auth/signin/verify?token=${token}`
+      );
+    }
 
     res.status(201).json({ message: 'Email Sent' });
   } catch (err: any) {

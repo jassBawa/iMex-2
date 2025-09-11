@@ -12,6 +12,7 @@ export async function createUserInEngine(user: User) {
     data: JSON.stringify({
       email: user.email,
       id: user.id,
+      balance: user.balance,
     }),
   };
   await redisClient.xAdd('stream:engine', '*', payload);

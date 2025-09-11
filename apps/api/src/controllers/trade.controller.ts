@@ -3,6 +3,7 @@ import { RedisSubscriber } from '../services/redis.service';
 import { closeOrderSchema, openOrderSchema } from '../validations/ordersSchema';
 import { redisClient } from '../lib/redisClient';
 import { randomUUID } from 'crypto';
+import client from '@imex/db';
 
 export const CREATE_ORDER_QUEUE = 'stream:engine';
 
@@ -16,8 +17,16 @@ export async function createOrder(req: Request, res: Response) {
     return;
   }
 
-  const { asset, leverage, quantity, slippage, side, stopLoss, takeProfit } =
-    data;
+  const {
+    asset,
+    leverage,
+    quantity,
+    slippage,
+    side,
+    stopLoss,
+    takeProfit,
+    tradeOpeningPrice,
+  } = data;
   try {
     const requestId = Date.now().toString();
 
@@ -35,6 +44,7 @@ export async function createOrder(req: Request, res: Response) {
           slippage,
           stopLoss,
           takeProfit,
+          tradeOpeningPrice,
         },
       }),
     };
@@ -89,5 +99,55 @@ export async function closeOrder(req: Request, res: Response) {
     res.status(500).json({
       message: 'Something went wrong: ' + err.reason,
     });
+  }
+}
+
+export async function fetchCloseOrders(req: Request, res: Response) {
+  const email = req.user;
+
+  try {
+    const user = await client.user.findFirst({
+      where: {
+        email,
+      },
+    });
+
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+    const orders = await client.existingTrade.findMany({
+      where: {
+        userId: user.id,
+      },
+    });
+
+    res.status(200).json({ orders });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: 'Something went wrong' });
+  }
+}
+
+export async function fetchOpenOrders(req: Request, res: Response) {
+  const email = req.user;
+
+  try {
+    const requestId = Date.now().toString();
+
+    const payload = {
+      type: 'FETCH_OPEN_ORDERS',
+      requestId: requestId,
+      data: JSON.stringify({
+        email: email,
+      }),
+    };
+    await redisClient.xAdd(CREATE_ORDER_QUEUE, '*', payload);
+    const { orders } = await redisSubscriber.waitForMessage(requestId);
+
+    res.status(200).json({ orders });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: 'Something went wrong' });
   }
 }
