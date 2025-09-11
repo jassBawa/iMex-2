@@ -26,13 +26,11 @@ ws.onmessage = async (event) => {
   const [decimal, integer] = getIntAndDecimal(parseData.a);
 
   const pricePlusOnePercent = Math.round(integer * 1.01);
-  // console.log(parseData)
   assets[parseData.s] = {
     buyPrice: pricePlusOnePercent,
     sellPrice: integer,
     decimal: decimal,
   };
-  // console.log(assets)
 };
 
 ws.onclose = () => {

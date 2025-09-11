@@ -13,5 +13,10 @@
   },
   "dependencies": {
     "prisma": "^6.15.0"
+  },
+  "scripts": {
+    "db:generate": "bunx prisma generate",
+    "db:migrate": "bunx prisma migrate dev",
+    "db:reset": "bunx prisma migrate reset"
   }
 }
