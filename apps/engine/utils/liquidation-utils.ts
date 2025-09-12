@@ -8,6 +8,7 @@ export async function closeOrder(
   reason: string,
   currentPrice: AsksBids
 ) {
+  console.log(realizedPnl, reason);
   const tradeIndex = user.trades.findIndex((trade) => trade.id === orderId);
   if (tradeIndex === -1) {
     return;
@@ -30,6 +31,8 @@ export async function closeOrder(
     pnl = (openPrice - closePrice) * quantity;
   }
 
+  console.log('line 34', closedTrade);
+  console.log('pnl, lev', pnl, leverage);
   // todo: remove from memory
   user.balance.amount += margin + pnl * leverage;
   closedTrade.status = 'CLOSED';
@@ -38,15 +41,17 @@ export async function closeOrder(
   closedTrade.closedAt = new Date();
 
   console.log(`Successfully closed trade ${orderId}. PnL: ${pnl}`);
+  console.log('line 44', closedTrade);
 
   await prisma.existingTrade.create({
     data: {
+      side: side,
       userId: user.id,
       asset: asset,
       openPrice: openPrice,
       closePrice: closePrice,
       leverage: leverage,
-      pnl: pnl,
+      pnl: pnl * leverage,
       liquidated: true,
       createdAt: new Date(),
       slippage: slippage,
@@ -73,6 +78,8 @@ export async function closeOrder(
 
 export function calculatePnl(order: Trade, closePrice: number): number {
   if (order.side === 'LONG') {
+    console.log('closePrice', closePrice);
+    console.log('order', order);
     return (closePrice - order.openPrice) * order.quantity * order.leverage;
   } else {
     return (order.openPrice - closePrice) * order.quantity * order.leverage;

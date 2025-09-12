@@ -21,6 +21,7 @@ model ExistingTrade {
   closePrice Float
   leverage   Float
   pnl        Float
+  side       String
   asset      String
   liquidated Boolean
   slippage   Int

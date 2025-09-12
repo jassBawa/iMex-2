@@ -26,8 +26,10 @@ export async function handlePriceUpdateEntry(payload: PriceStore) {
       let closeReason: string | null = null;
 
       const relevantPrice =
-        side === 'LONG' ? currentPrices.buyPrice : currentPrices.sellPrice;
-
+        side === 'LONG'
+          ? currentPrices.buyPrice / 10 ** currentPrices.decimal
+          : currentPrices.sellPrice / 10 ** currentPrices.decimal;
+      console.log(relevantPrice);
       if (side === 'LONG') {
         if (stopLoss && relevantPrice <= stopLoss) {
           pnlToRealize = calculatePnl(order, stopLoss);
@@ -113,6 +115,7 @@ export async function handleOpenTrade(
 
     console.log('slippedValue', slippedValue);
 
+    console.log(slippedValue, slippage);
     if (slippedValue > slippage / 100) {
       await sendAcknowledgement(requestId, 'TRADE_SLIPPAGE_MAX_EXCEEDED', {
         message: 'Price changed by alot',
@@ -210,7 +213,6 @@ export async function handleCloseTrade(
       pnl = (openPrice - closePrice) * quantity;
     }
 
-    // todo: remove from memory
     user.balance.amount += margin + pnl * leverage;
     tradeToClose.status = 'CLOSED';
     tradeToClose.closePrice = closePrice;
@@ -226,10 +228,11 @@ export async function handleCloseTrade(
         openPrice: openPrice,
         closePrice: closePrice,
         leverage: leverage,
-        pnl: pnl,
+        pnl: tradeToClose.pnl,
         liquidated: true,
         createdAt: new Date(),
         slippage: slippage,
+        side: side,
       },
     });
 
