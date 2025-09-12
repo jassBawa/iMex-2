@@ -3,7 +3,7 @@ import { RedisSubscriber } from '../services/redis.service';
 import { closeOrderSchema, openOrderSchema } from '../validations/ordersSchema';
 import { randomUUID } from 'crypto';
 import client from '@imex/db';
-import { httpPusher } from '@iMex/redis/redisStream';
+import { redisStreamClient } from '@iMex/redis/redisStream';
 
 export const CREATE_ORDER_QUEUE = 'stream:engine';
 
@@ -49,7 +49,7 @@ export async function createOrder(req: Request, res: Response) {
       }),
     };
 
-    await httpPusher.xAdd(CREATE_ORDER_QUEUE, '*', payload);
+    await redisStreamClient.xAdd(CREATE_ORDER_QUEUE, '*', payload);
 
     const { tradeDetails } = await redisSubscriber.waitForMessage(requestId);
 
@@ -142,7 +142,7 @@ export async function fetchOpenOrders(req: Request, res: Response) {
         email: email,
       }),
     };
-    await httpPusher.xAdd(CREATE_ORDER_QUEUE, '*', payload);
+    await redisStreamClient.xAdd(CREATE_ORDER_QUEUE, '*', payload);
     const { orders } = await redisSubscriber.waitForMessage(requestId);
 
     res.status(200).json({ orders });

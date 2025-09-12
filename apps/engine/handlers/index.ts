@@ -10,7 +10,7 @@ export async function processMessage(message: any) {
   const requestId = message.message.requestId;
   const requestType = message.message.type;
   const payload = JSON.parse(message.message.data);
-
+  console.log(payload);
   switch (requestType) {
     case 'USER_CREATED':
       handleUserCreation(payload, requestId);

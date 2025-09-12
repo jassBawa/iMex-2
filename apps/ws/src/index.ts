@@ -17,6 +17,7 @@ const wss = new WebSocketServer({ port: Number(process.env.WS_PORT!) });
   await subscriber.subscribe('ws:price:update', async (msg) => {
     wss.clients.forEach((client) => {
       client.send(msg);
+      console.log(msg);
     });
   });
 })();
