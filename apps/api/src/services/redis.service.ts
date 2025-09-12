@@ -1,4 +1,8 @@
-import { createClient, type RedisClientType } from 'redis';
+import redisClient, {
+  type TypeOfRedisClient as RedisClientType,
+} from '@iMex/redis';
+
+const httpPusher: RedisClientType = redisClient.duplicate();
 
 export const ACKNOWLEDGEMENT_QUEUE = 'stream:engine:acknowledgement';
 export class RedisSubscriber {
@@ -7,7 +11,7 @@ export class RedisSubscriber {
   private callbacks: Record<string, { resolve: any; reject: any }>;
 
   private constructor() {
-    this.client = createClient();
+    this.client = httpPusher;
     this.client.connect();
     this.callbacks = {};
     this.runLoop();

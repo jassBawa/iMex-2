@@ -1,7 +1,7 @@
+import { enginePuller } from '@iMex/redis/redisStream';
 import { processMessage } from './handlers';
 import { prices, users } from './memoryDb';
 import { mongodb } from './utils/dbClient';
-import { client } from './utils/redis-client';
 
 const STREAM_KEY = 'stream:engine';
 const GROUP_NAME = 'group';
@@ -55,14 +55,14 @@ async function saveSnapshot() {
 
 async function startEngine() {
   try {
-    await client.xGroupCreate(STREAM_KEY, GROUP_NAME, '0', { MKSTREAM: true });
+    await enginePuller.xGroupCreate(STREAM_KEY, GROUP_NAME, '0', { MKSTREAM: true });
   } catch (err) {
     console.log('Consumer group exists');
   }
 
   await restoreSnapshot();
 
-  const groups = await client.xInfoGroups(STREAM_KEY);
+  const groups = await enginePuller.xInfoGroups(STREAM_KEY);
   const lastDeliveredId = groups[0]?.['last-delivered-id']?.toString();
 
   if (
@@ -75,10 +75,10 @@ async function startEngine() {
 
   while (true) {
     if (lastItemReadId) {
-      await client.xAck(STREAM_KEY, GROUP_NAME, lastItemReadId);
+      await enginePuller.xAck(STREAM_KEY, GROUP_NAME, lastItemReadId);
     }
 
-    const response = (await client.xReadGroup(
+    const response = (await enginePuller.xReadGroup(
       GROUP_NAME,
       CONSUMER_NAME,
       { key: STREAM_KEY, id: '>' },
@@ -98,7 +98,7 @@ async function startEngine() {
 
 // todo
 async function replay(fromId: string, toId: string) {
-  const entries = await client.xRange(STREAM_KEY, fromId, toId);
+  const entries = await enginePuller.xRange(STREAM_KEY, fromId, toId);
   const missed = entries.slice(1);
 
   for (const entry of missed) {
@@ -114,8 +114,8 @@ async function replay(fromId: string, toId: string) {
   }
 }
 
-client.on('connect', startEngine);
+enginePuller.on('connect', startEngine);
 
-client.on('error', () => {
+enginePuller.on('error', () => {
   console.log('Redis connection error');
 });

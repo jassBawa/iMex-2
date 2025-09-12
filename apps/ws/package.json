@@ -1,9 +1,9 @@
 {
-  "name": "engine",
+  "name": "ws",
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "dev": "bun run --hot index.ts"
+    "dev": "bun run src/index.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"
@@ -12,8 +12,8 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@imex/db": "workspace:*",
-    "@iMex/redis": "workspace:*",
-    "mongodb": "^6.19.0"
+    "@types/ws": "^8.18.1",
+    "ws": "^8.18.3",
+    "@iMex/redis": "workspace:*"
   }
 }

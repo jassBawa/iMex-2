@@ -1,9 +1,8 @@
-import { createClient } from 'redis';
+import { pricePusher } from '@iMex/redis/redisStream';
 
-const client = createClient();
-
-await client.connect();
-
+(async () => {
+  await pricePusher.connect();
+})();
 const ws = new WebSocket('wss://ws.backpack.exchange/');
 
 let assets: Record<string, {}> = {};
@@ -45,7 +44,7 @@ setInterval(() => {
     data: JSON.stringify(assets),
     type: 'PRICE_UPDATE',
   };
-  client.xAdd('stream:engine', '*', data);
+  pricePusher.xAdd('stream:engine', '*', data);
 }, 4000);
 
 interface Trade {

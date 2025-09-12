@@ -1,9 +1,9 @@
 import type { Request, Response } from 'express';
 import { RedisSubscriber } from '../services/redis.service';
 import { closeOrderSchema, openOrderSchema } from '../validations/ordersSchema';
-import { redisClient } from '../lib/redisClient';
 import { randomUUID } from 'crypto';
 import client from '@imex/db';
+import { httpPusher } from '@iMex/redis/redisStream';
 
 export const CREATE_ORDER_QUEUE = 'stream:engine';
 
@@ -49,7 +49,7 @@ export async function createOrder(req: Request, res: Response) {
       }),
     };
 
-    await redisClient.xAdd(CREATE_ORDER_QUEUE, '*', payload);
+    await httpPusher.xAdd(CREATE_ORDER_QUEUE, '*', payload);
 
     const { tradeDetails } = await redisSubscriber.waitForMessage(requestId);
 
@@ -86,7 +86,7 @@ export async function closeOrder(req: Request, res: Response) {
     }),
   };
 
-  await redisClient.xAdd(CREATE_ORDER_QUEUE, '*', payload);
+  await httpPusher.xAdd(CREATE_ORDER_QUEUE, '*', payload);
 
   try {
     const { status, reason } = await redisSubscriber.waitForMessage(requestId);
@@ -142,7 +142,7 @@ export async function fetchOpenOrders(req: Request, res: Response) {
         email: email,
       }),
     };
-    await redisClient.xAdd(CREATE_ORDER_QUEUE, '*', payload);
+    await httpPusher.xAdd(CREATE_ORDER_QUEUE, '*', payload);
     const { orders } = await redisSubscriber.waitForMessage(requestId);
 
     res.status(200).json({ orders });
