@@ -1,36 +1,33 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/axios';
 
 export type OrderPayload = {
-  symbol: string;
-  side: 'BUY' | 'SELL';
+  asset: string;
+  side: 'LONG' | 'SHORT';
   quantity: number;
   leverage: number;
+  slippage: number;
+  tradeOpeningPrice: number;
   stopLoss?: number;
   takeProfit?: number;
 };
 
-const BE_URL = 'http://localhost:4000/api/v1';
-
 export async function createOrder(payload: OrderPayload) {
-  const res = await fetch(`${BE_URL}/order`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({}));
-    throw new Error(error.message || 'Failed to place order');
-  }
-
-  return res.json();
+  const { data } = await api.post('/trade/create-order', payload);
+  return data;
 }
 
 export function useCreateOrder() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationKey: ['createOrder'],
     mutationFn: (payload: OrderPayload) => createOrder(payload),
+    onSuccess: () => {
+      // Invalidate balance and orders cache when order is created
+      queryClient.invalidateQueries({ queryKey: ['balance'] });
+      queryClient.invalidateQueries({ queryKey: ['openOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['closedOrders'] });
+    },
   });
 }

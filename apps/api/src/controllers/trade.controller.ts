@@ -139,7 +139,6 @@ export async function fetchOpenOrders(req: Request, res: Response) {
 
   try {
     const requestId = Date.now().toString();
-
     const payload = {
       type: 'FETCH_OPEN_ORDERS',
       requestId: requestId,
@@ -147,9 +146,10 @@ export async function fetchOpenOrders(req: Request, res: Response) {
         email: email,
       }),
     };
-    await httpPusher.xAdd(CREATE_ORDER_QUEUE, '*', payload);
+    const res1 = await httpPusher.xAdd(CREATE_ORDER_QUEUE, '*', payload);
+    console.log(res1);
     const { orders } = await redisSubscriber.waitForMessage(requestId);
-
+    console.log(orders);
     res.status(200).json({ orders });
   } catch (err) {
     console.log(err);

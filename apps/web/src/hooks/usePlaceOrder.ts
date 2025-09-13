@@ -18,8 +18,11 @@ export function usePlaceOrder() {
       return data;
     },
     onSuccess: () => {
-      // Invalidate cache if needed
+      // Invalidate balance and orders cache when order is placed
+      queryClient.invalidateQueries({ queryKey: ['balance'] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['openOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['closedOrders'] });
     },
     onError: (error) => {
       console.error('Failed to place order', error);

@@ -86,7 +86,7 @@ export async function signInVerify(req: Request, res: Response) {
       maxAge: 2 * 24 * 60 * 60 * 1000,
     });
 
-    return res.redirect('/dashboard'); 
+    return res.redirect(process.env.FRONTEND_URL! + '/trade');
   } catch (err: any) {
     console.log(err);
     res.status(500).json({ message: 'Interal server error' });

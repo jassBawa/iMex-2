@@ -94,17 +94,22 @@ export default function TradingPanel() {
 
     try {
       const qty = side === 'BUY' ? toNumber(buyQty) : toNumber(sellQty);
+      const uiSide = side === 'BUY' ? 'LONG' : 'SHORT';
+      const asset = symbol.replace('USDT', '_USDC');
+      const tradeOpeningPrice = currentPrice || 0;
+      const slippage = 500; // default; adjust if you add UI
 
-      const input: OrderInput = {
-        symbol,
-        side,
+      // Leverage expected as whole number (e.g., 10000 for 100x) per spec
+      const scaledLeverage = leverage * 100;
+
+      await orderMutation.mutateAsync({
+        asset,
+        side: uiSide as 'LONG' | 'SHORT',
         quantity: qty,
-        leverage,
-      };
-
-      const parsed = orderSchema.parse(input);
-
-      await orderMutation.mutateAsync(parsed);
+        leverage: scaledLeverage,
+        slippage,
+        tradeOpeningPrice,
+      });
     } catch (err: any) {
       setError(err.message || 'Validation failed');
     }

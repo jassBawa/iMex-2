@@ -18,7 +18,7 @@ export async function authMiddleware(
     const authCookie = req.cookies['token'];
 
     if (!authCookie) {
-      res.status(404).json({ message: 'Cookie not found' });
+      res.status(401).json({ message: 'Cookie not found' });
       return;
     }
 
@@ -27,15 +27,16 @@ export async function authMiddleware(
     };
 
     if (!payload) {
-      res.cookie('token', {});
-      res.status(400).json({ message: 'Invalid Cookie' });
+      res.cookie('token', '', { expires: new Date(0) });
+      res.status(401).json({ message: 'Invalid Cookie' });
       return;
     }
 
     req.user = payload.email;
+    console.log(req.user);
     next();
   } catch (err) {
     console.log(err);
-    res.status(500).json({ message: 'Internal Server Error' });
+    res.status(401).json({ message: 'Invalid token' });
   }
 }

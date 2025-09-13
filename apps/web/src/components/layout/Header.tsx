@@ -3,8 +3,20 @@ import { BarChart3 } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import Link from 'next/link';
+import { useBalance } from '@/hooks/useBalance';
 
 function Header() {
+  const { data: balanceData, isLoading, error } = useBalance();
+
+  const formatBalance = (amount: number, currency: string) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
+
   return (
     <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="container mx-auto">
@@ -32,7 +44,20 @@ function Header() {
 
             <div className="hidden sm:flex items-center space-x-2 text-sm">
               <span className="text-muted-foreground">Balance:</span>
-              <span className="text-price font-semibold">$12,450.88</span>
+              {isLoading ? (
+                <span className="text-price font-semibold">Loading...</span>
+              ) : error ? (
+                <span className="text-destructive font-semibold">Error</span>
+              ) : balanceData?.balance ? (
+                <span className="text-price font-semibold">
+                  {formatBalance(
+                    balanceData.balance.amount,
+                    balanceData.balance.currency
+                  )}
+                </span>
+              ) : (
+                <span className="text-price font-semibold">$0.00</span>
+              )}
             </div>
 
             <Button size="sm" className="bg-primary hover:bg-primary-hover">
