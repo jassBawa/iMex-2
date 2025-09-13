@@ -1,17 +1,18 @@
 import { useMutation } from '@tanstack/react-query';
+import api from '@/lib/axios';
 import axios from 'axios';
 
 export type LoginPayload = {
   email: string;
-  password: string;
 };
 
-const BE_URL = 'http://localhost:4000/api/v1';
-
 export async function login(payload: LoginPayload) {
-  const { data } = await axios.post(`${BE_URL}/auth/login`, payload, {
-    withCredentials: true,
-  });
+  // Using signup endpoint to issue magic sign-in link via email
+  const { data } = await api.post(`/auth/signup`, payload);
+  // const { data } = await axios.post(
+  //   `http://localhost:4000/api/v1/auth/signup`,
+  //   payload
+  // );
   return data;
 }
 

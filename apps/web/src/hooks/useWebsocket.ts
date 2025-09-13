@@ -13,18 +13,67 @@ export interface TradeMessage {
 // keep a shared connection outside the hook
 let ws: WebSocket | null = null;
 let listeners: ((msg: TradeMessage) => void)[] = [];
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080';
 
 export function useWebSocket(onMessage: (msg: TradeMessage) => void) {
   useEffect(() => {
     // create socket only once
     if (!ws) {
-      ws = new WebSocket('ws://localhost:8080');
+      ws = new WebSocket(WS_URL);
 
       ws.onmessage = (event) => {
         try {
-          const data: TradeMessage = JSON.parse(event.data);
-          // notify all subscribers
-          listeners.forEach((cb) => cb(data));
+          const parsed = JSON.parse(event.data);
+
+          // Handle aggregated PRICE_UPDATE payloads from ws service
+          if (
+            parsed &&
+            parsed.type === 'PRICE_UPDATE' &&
+            typeof parsed.data === 'string'
+          ) {
+            const priceMap = JSON.parse(parsed.data) as Record<
+              string,
+              { buyPrice: number; sellPrice: number; decimal: number }
+            >;
+
+            const now = Date.now();
+
+            Object.entries(priceMap).forEach(([pair, p]) => {
+              const scale = Math.pow(10, p.decimal || 0);
+              const ask = p.buyPrice / scale; // price to buy at
+              const bid = p.sellPrice / scale; // price to sell at
+
+              const symbol = mapPairToUiSymbol(pair);
+
+              const askMsg: TradeMessage = {
+                type: 'ASK',
+                symbol,
+                price: ask,
+                originalPrice: ask,
+                quantity: 0,
+                time: now,
+              };
+              const bidMsg: TradeMessage = {
+                type: 'BID',
+                symbol,
+                price: bid,
+                originalPrice: bid,
+                quantity: 0,
+                time: now,
+              };
+
+              listeners.forEach((cb) => cb(askMsg));
+              listeners.forEach((cb) => cb(bidMsg));
+            });
+
+            return;
+          }
+
+          // Fallback for legacy single-tick messages
+          if (parsed && parsed.type && parsed.symbol && parsed.price) {
+            listeners.forEach((cb) => cb(parsed as TradeMessage));
+            return;
+          }
         } catch (err) {
           console.error('WS parse error', err);
         }
@@ -50,4 +99,12 @@ export function useWebSocket(onMessage: (msg: TradeMessage) => void) {
       }
     };
   }, [onMessage]);
+}
+
+function mapPairToUiSymbol(pair: string): string {
+  // Example inputs: BTC_USDC, ETH_USDC, SOL_USDC
+  // UI expects: BTCUSDT, ETHUSDT, SOLUSDT
+  const compact = pair.replace('_', '');
+  if (compact.endsWith('USDC')) return compact.replace('USDC', 'USDT');
+  return compact;
 }

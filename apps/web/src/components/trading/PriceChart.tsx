@@ -28,6 +28,9 @@ const PriceChart = () => {
     data: candleData = [],
     isLoading,
     error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
   } = useCandles(symbol, interval);
 
   const sortedCandles = useMemo(() => {
@@ -37,9 +40,18 @@ const PriceChart = () => {
   }, [candleData]);
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<any>(null);
+  const loadingMoreRef = useRef(false);
+  const lastBarRef = useRef<{
+    time: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+  } | null>(null);
 
   useEffect(() => {
-    if (!chartRef.current || sortedCandles.length === 0) return;
+    if (!chartRef.current) return;
 
     // Create chart
     const chart = createChart(chartRef.current, {
@@ -83,8 +95,7 @@ const PriceChart = () => {
       wickDownColor: '#dc2626',
     });
 
-    candlestickSeries.setData(sortedCandles as CandlestickData<Time>[]);
-
+    seriesRef.current = candlestickSeries;
     chartInstanceRef.current = chart;
 
     const handleResize = () => {
@@ -96,15 +107,84 @@ const PriceChart = () => {
     };
     window.addEventListener('resize', handleResize);
 
+    // Load older candles when scrolled to the left edge
+    const timeScale = chart.timeScale();
+    const handleVisibleRangeChange = async (range: any) => {
+      if (!range || loadingMoreRef.current) return;
+      if (!hasNextPage) return;
+      if (!sortedCandles.length) return;
+      const earliest = sortedCandles[0]?.time;
+      if (typeof range.from === 'number' && typeof earliest === 'number') {
+        // When left boundary is at or before earliest loaded candle, fetch older
+        if (range.from <= earliest) {
+          loadingMoreRef.current = true;
+          try {
+            await fetchNextPage();
+          } finally {
+            loadingMoreRef.current = false;
+          }
+        }
+      }
+    };
+    timeScale.subscribeVisibleTimeRangeChange(handleVisibleRangeChange);
+
     return () => {
       window.removeEventListener('resize', handleResize);
+      timeScale.unsubscribeVisibleTimeRangeChange(handleVisibleRangeChange);
       chart.remove();
+      chartInstanceRef.current = null;
+      seriesRef.current = null;
     };
+  }, [symbol, interval, hasNextPage, fetchNextPage, sortedCandles]);
+
+  // Update series when data changes
+  useEffect(() => {
+    if (!seriesRef.current) return;
+    if (!sortedCandles.length) return;
+    seriesRef.current.setData(sortedCandles as CandlestickData<Time>[]);
+    const last = sortedCandles[sortedCandles.length - 1];
+    if (last) {
+      lastBarRef.current = {
+        time: last.time as number,
+        open: last.open,
+        high: last.high,
+        low: last.low,
+        close: last.close,
+      };
+    }
   }, [sortedCandles]);
 
+  // Ensure top price updates when switching assets (even before first WS tick)
+  useEffect(() => {
+    if (!priceRef.current) return;
+    const last = sortedCandles[sortedCandles.length - 1];
+    if (last) {
+      priceRef.current.textContent = '$' + formatPrice(last.close);
+    } else {
+      priceRef.current.textContent = '-';
+    }
+  }, [symbol, sortedCandles]);
+
   useWebSocket((data: TradeMessage) => {
-    if (data.symbol === symbol && priceRef.current) {
+    if (data.symbol !== symbol) return;
+
+    // Update the top price immediately
+    if (priceRef.current) {
       priceRef.current.textContent = '$' + formatPrice(data.price);
+    }
+
+    // Update the last candle with live price
+    if (seriesRef.current && lastBarRef.current) {
+      const prev = lastBarRef.current;
+      const updated = {
+        time: prev.time,
+        open: prev.open,
+        high: Math.max(prev.high, data.price),
+        low: Math.min(prev.low, data.price),
+        close: data.price,
+      };
+      lastBarRef.current = updated;
+      seriesRef.current.update(updated);
     }
   });
 

@@ -86,9 +86,7 @@ export async function signInVerify(req: Request, res: Response) {
       maxAge: 2 * 24 * 60 * 60 * 1000,
     });
 
-    res.status(200).json({
-      message: 'User verified successfully. Logged in.',
-    });
+    return res.redirect('/dashboard'); 
   } catch (err: any) {
     console.log(err);
     res.status(500).json({ message: 'Interal server error' });

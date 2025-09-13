@@ -31,28 +31,6 @@ const Assets = () => {
     }
   });
 
-  // useEffect(() => {
-  //   const ws = new WebSocket('ws://localhost:8080');
-
-  //   ws.onmessage = (event) => {
-  //     try {
-  //       const data: TradeMessage = JSON.parse(event.data);
-  //       console.log(data);
-  //       const { symbol, type, price, originalPrice } = data;
-
-  //       if (type === 'BID' && bidRefs.current[symbol]) {
-  //         bidRefs.current[symbol]!.textContent = formatPrice(price);
-  //         console.log(bidRefs.current[symbol].textContent);
-  //       } else if (type === 'ASK' && askRefs.current[symbol]) {
-  //         askRefs.current[symbol]!.textContent = formatPrice(price);
-  //       }
-  //     } catch (err) {
-  //       console.error('WS parse error', err);
-  //     }
-  //   };
-
-  //   return () => ws.close();
-  // }, []);
   return (
     <Card className="trading-card h-full">
       <CardHeader className="pb-4">

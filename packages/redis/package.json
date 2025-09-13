@@ -1,5 +1,5 @@
 {
-  "name": "@iMex/redisclient",
+  "name": "@iMex/redis",
   "module": "index.ts",
   "main": "./src/index.ts",
   "types": "./src/index.ts",

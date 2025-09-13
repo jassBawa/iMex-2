@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '@/lib/axios';
 
 export type SignupPayload = {
   name: string;
@@ -7,12 +7,8 @@ export type SignupPayload = {
   password: string;
 };
 
-const BE_URL = 'http://localhost:4000/api/v1';
-
 export async function signup(payload: SignupPayload) {
-  const { data } = await axios.post(`${BE_URL}/auth/signup`, payload, {
-    withCredentials: true,
-  });
+  const { data } = await api.post(`/auth/signup`, payload);
   return data;
 }
 

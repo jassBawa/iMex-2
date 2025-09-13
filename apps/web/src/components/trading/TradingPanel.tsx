@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Slider } from '@/components/ui/slider';
 import { useCreateOrder } from '@/hooks/useCreateOrder';
 import { useWebSocket } from '@/hooks/useWebsocket';
 import { useTrading } from '@/providers/trading-context';
@@ -163,21 +164,20 @@ export default function TradingPanel() {
               </div>
 
               {/* Leverage */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Leverage</Label>
-                <div className="flex flex-col items-center gap-2 ">
-                  {[1, 5, 10, 20].map((lev) => (
-                    <Button
-                      key={lev}
-                      variant={lev === leverage ? 'default' : 'outline'}
-                      size="lg"
-                      className="w-full h-8"
-                      onClick={() => setLeverage(lev)}
-                    >
-                      {lev}x
-                    </Button>
-                  ))}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Leverage</Label>
+                  <span className="text-sm font-semibold text-primary">
+                    {leverage}x
+                  </span>
                 </div>
+                <Slider
+                  min={1}
+                  max={100}
+                  step={1}
+                  value={[leverage]}
+                  onValueChange={(v) => setLeverage(v[0] ?? 1)}
+                />
               </div>
 
               {/* Margin + Position size */}
@@ -231,21 +231,20 @@ export default function TradingPanel() {
               </div>
 
               {/* Leverage */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Leverage</Label>
-                <div className="flex flex-col gap-2">
-                  {[1, 5, 10, 20].map((lev) => (
-                    <Button
-                      key={lev}
-                      variant={lev === leverage ? 'default' : 'outline'}
-                      size="lg"
-                      className="w-full h-8"
-                      onClick={() => setLeverage(lev)}
-                    >
-                      {lev}x
-                    </Button>
-                  ))}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Leverage</Label>
+                  <span className="text-sm font-semibold text-primary">
+                    {leverage}x
+                  </span>
                 </div>
+                <Slider
+                  min={1}
+                  max={100}
+                  step={1}
+                  value={[leverage]}
+                  onValueChange={(v) => setLeverage(v[0] ?? 1)}
+                />
               </div>
 
               {/* Margin + Position size */}
