@@ -9,7 +9,7 @@ import { useCreateOrder } from '@/hooks/useCreateOrder';
 import { useWebSocket } from '@/hooks/useWebsocket';
 import { useTrading } from '@/providers/trading-context';
 import { TrendingDown, TrendingUp } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import z from 'zod';
 
 const orderSchema = z.object({
@@ -59,6 +59,7 @@ export default function TradingPanel() {
   const [buyQty, setBuyQty] = useState<string>('');
   const [sellQty, setSellQty] = useState<string>('');
   const [leverage, setLeverage] = useState<number>(1);
+  const [slippage, setSlippage] = useState<number>(1); // Default 1% slippage
   const orderMutation = useCreateOrder();
   const [error, setError] = useState<string | null>(null);
 
@@ -67,6 +68,13 @@ export default function TradingPanel() {
     if (msg.symbol !== symbol) return;
     setCurrentPrice(msg.price);
   });
+
+  // Reset quantity fields when asset changes
+  useEffect(() => {
+    setBuyQty('');
+    setSellQty('');
+    setError(null);
+  }, [symbol]);
 
   // margin = price × qty
   const buyMargin = useMemo(() => {
@@ -94,10 +102,19 @@ export default function TradingPanel() {
 
     try {
       const qty = side === 'BUY' ? toNumber(buyQty) : toNumber(sellQty);
+
+      // Validate quantity
+      if (!qty || qty <= 0) {
+        setError('Quantity must be greater than 0');
+        return;
+      }
+
       const uiSide = side === 'BUY' ? 'LONG' : 'SHORT';
       const asset = symbol.replace('USDT', '_USDC');
       const tradeOpeningPrice = currentPrice || 0;
-      const slippage = 500; // default; adjust if you add UI
+
+      // Convert slippage percentage to basis points (1% = 100 basis points)
+      const slippageInBasisPoints = slippage * 100;
 
       // Leverage expected as whole number (e.g., 10000 for 100x) per spec
       const scaledLeverage = leverage * 100;
@@ -107,7 +124,7 @@ export default function TradingPanel() {
         side: uiSide as 'LONG' | 'SHORT',
         quantity: qty,
         leverage: scaledLeverage,
-        slippage,
+        slippage: slippageInBasisPoints,
         tradeOpeningPrice,
       });
     } catch (err: any) {
@@ -147,7 +164,7 @@ export default function TradingPanel() {
               {/* Quantity */}
               <div className="space-y-2">
                 <Label htmlFor="buy-quantity" className="text-sm font-medium">
-                  Quantity (BTC)
+                  Quantity ({symbol.replace('USDT', '')})
                 </Label>
                 <Input
                   id="buy-quantity"
@@ -185,6 +202,26 @@ export default function TradingPanel() {
                 />
               </div>
 
+              {/* Slippage */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Slippage</Label>
+                  <span className="text-sm font-semibold text-primary">
+                    {slippage}%
+                  </span>
+                </div>
+                <Slider
+                  min={1}
+                  max={10}
+                  step={0.1}
+                  value={[slippage]}
+                  onValueChange={(v) => setSlippage(Math.max(1, v[0] ?? 1))}
+                />
+                <div className="text-xs text-muted-foreground">
+                  Minimum 1% slippage
+                </div>
+              </div>
+
               {/* Margin + Position size */}
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Margin</span>
@@ -202,8 +239,11 @@ export default function TradingPanel() {
               <Button
                 onClick={() => handlePlaceOrder('BUY')}
                 className="w-full bg-success hover:bg-success/90 text-success-foreground"
+                disabled={orderMutation.isPending}
               >
-                Place Buy Order
+                {orderMutation.isPending
+                  ? 'Placing Order...'
+                  : 'Place Buy Order'}
               </Button>
             </div>
           </TabsContent>
@@ -214,7 +254,7 @@ export default function TradingPanel() {
               {/* Quantity */}
               <div className="space-y-2">
                 <Label htmlFor="sell-quantity" className="text-sm font-medium">
-                  Quantity (BTC)
+                  Quantity ({symbol.replace('USDT', '')})
                 </Label>
                 <Input
                   id="sell-quantity"
@@ -252,6 +292,26 @@ export default function TradingPanel() {
                 />
               </div>
 
+              {/* Slippage */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Slippage</Label>
+                  <span className="text-sm font-semibold text-primary">
+                    {slippage}%
+                  </span>
+                </div>
+                <Slider
+                  min={1}
+                  max={10}
+                  step={0.1}
+                  value={[slippage]}
+                  onValueChange={(v) => setSlippage(Math.max(1, v[0] ?? 1))}
+                />
+                <div className="text-xs text-muted-foreground">
+                  Minimum 1% slippage
+                </div>
+              </div>
+
               {/* Margin + Position size */}
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Margin</span>
@@ -269,12 +329,22 @@ export default function TradingPanel() {
               <Button
                 onClick={() => handlePlaceOrder('SELL')}
                 className="w-full bg-danger hover:bg-danger/90 text-danger-foreground"
+                disabled={orderMutation.isPending}
               >
-                Place Sell Order
+                {orderMutation.isPending
+                  ? 'Placing Order...'
+                  : 'Place Sell Order'}
               </Button>
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Error Display */}
+        {error && (
+          <div className="mt-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+            {error}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
