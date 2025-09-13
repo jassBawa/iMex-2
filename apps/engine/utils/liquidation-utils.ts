@@ -8,7 +8,6 @@ export async function closeOrder(
   reason: string,
   currentPrice: AsksBids
 ) {
-  console.log(realizedPnl, reason);
   const tradeIndex = user.trades.findIndex((trade) => trade.id === orderId);
   if (tradeIndex === -1) {
     return;
@@ -24,37 +23,28 @@ export async function closeOrder(
       ? currentPrice.sellPrice / 10 ** currentPrice.decimal
       : currentPrice.buyPrice / 10 ** currentPrice.decimal;
 
-  let pnl = 0;
-  if (side === 'LONG') {
-    pnl = (closePrice - openPrice) * quantity;
-  } else {
-    pnl = (openPrice - closePrice) * quantity;
-  }
 
-  console.log('line 34', closedTrade);
-  console.log('pnl, lev', pnl, leverage);
-  // todo: remove from memory
-  user.balance.amount += margin + pnl * leverage;
+  user.balance.amount += margin + realizedPnl;
   closedTrade.status = 'CLOSED';
   closedTrade.closePrice = closePrice;
-  closedTrade.pnl = pnl * leverage;
+  closedTrade.pnl = realizedPnl;
   closedTrade.closedAt = new Date();
 
-  console.log(`Successfully closed trade ${orderId}. PnL: ${pnl}`);
-  console.log('line 44', closedTrade);
+  console.log(`Trade ${orderId} closed. Reason: ${reason}. PnL: ${realizedPnl}`);
 
   await prisma.existingTrade.create({
     data: {
-      side: side,
+      side,
       userId: user.id,
-      asset: asset,
-      openPrice: openPrice,
-      closePrice: closePrice,
-      leverage: leverage,
-      pnl: pnl * leverage,
-      liquidated: true,
+      asset,
+      openPrice,
+      closePrice,
+      leverage,
+      pnl: realizedPnl,
+      liquidated: reason === 'Liquidation',
       createdAt: new Date(),
-      slippage: slippage,
+      slippage,
+      reason,
     },
   });
 
@@ -67,21 +57,14 @@ export async function closeOrder(
     },
   });
 
-  user.trades = user.trades.filter((trade) => trade.id !== orderId);
-
-  if (closedTrade.margin) {
-    user.balance.amount += closedTrade.margin + realizedPnl;
-  }
-
   console.log(`Trade ${orderId} closed. Reason: ${reason}.`);
 }
 
 export function calculatePnl(order: Trade, closePrice: number): number {
-  if (order.side === 'LONG') {
-    console.log('closePrice', closePrice);
-    console.log('order', order);
-    return (closePrice - order.openPrice) * order.quantity * order.leverage;
+  const { side, openPrice, quantity, leverage } = order;
+  if (side === 'LONG') {
+    return (closePrice - openPrice) * quantity * leverage;
   } else {
-    return (order.openPrice - closePrice) * order.quantity * order.leverage;
+    return (openPrice - closePrice) * quantity * leverage;
   }
 }

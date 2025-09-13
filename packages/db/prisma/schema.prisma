@@ -26,6 +26,7 @@ model ExistingTrade {
   liquidated Boolean
   slippage   Int
   userId     String
+  reason     String?
   user       User     @relation(fields: [userId], references: [id])
   createdAt  DateTime @default(now())
 }

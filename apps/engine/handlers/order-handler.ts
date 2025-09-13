@@ -29,27 +29,22 @@ export async function handlePriceUpdateEntry(payload: PriceStore) {
         side === 'LONG'
           ? currentPrices.buyPrice / 10 ** currentPrices.decimal
           : currentPrices.sellPrice / 10 ** currentPrices.decimal;
-      console.log(relevantPrice);
       if (side === 'LONG') {
         if (stopLoss && relevantPrice <= stopLoss) {
           pnlToRealize = calculatePnl(order, stopLoss);
           closeReason = 'Stop Loss';
-          await closeOrder(user, id, pnlToRealize, closeReason, currentPrices);
         } else if (takeProfit && relevantPrice >= takeProfit) {
           pnlToRealize = calculatePnl(order, takeProfit);
           closeReason = 'Take Profit';
-          await closeOrder(user, id, pnlToRealize, closeReason, currentPrices);
         }
       } else {
         // SHORT
         if (stopLoss && relevantPrice >= stopLoss) {
           pnlToRealize = calculatePnl(order, stopLoss);
           closeReason = 'Stop Loss';
-          await closeOrder(user, id, pnlToRealize, closeReason, currentPrices);
         } else if (takeProfit && relevantPrice <= takeProfit) {
           pnlToRealize = calculatePnl(order, takeProfit);
           closeReason = 'Take Profit';
-          await closeOrder(user, id, pnlToRealize, closeReason, currentPrices);
         }
       }
 
@@ -58,7 +53,6 @@ export async function handlePriceUpdateEntry(payload: PriceStore) {
         if (margin && unrealizedPnl < 0 && Math.abs(unrealizedPnl) >= margin) {
           pnlToRealize = unrealizedPnl;
           closeReason = 'Liquidation';
-          await closeOrder(user, id, pnlToRealize, closeReason, currentPrices);
         }
       }
 
@@ -113,7 +107,7 @@ export async function handleOpenTrade(
     const slippedValue =
       Math.abs((tradeOpeningPrice - openPrice) / openPrice) * 100;
 
-    console.log('slippedValue', slippedValue);
+    console.log('slippedValue', 'slippedValue');
 
     console.log(slippedValue, slippage);
     if (slippedValue > slippage / 100) {
@@ -206,17 +200,12 @@ export async function handleCloseTrade(
         ? currentPrice.sellPrice / 10 ** currentPrice.decimal
         : currentPrice.buyPrice / 10 ** currentPrice.decimal;
 
-    let pnl = 0;
-    if (side === 'LONG') {
-      pnl = (closePrice - openPrice) * quantity;
-    } else {
-      pnl = (openPrice - closePrice) * quantity;
-    }
+    const pnl = calculatePnl(tradeToClose, closePrice);
 
-    user.balance.amount += margin + pnl * leverage;
+    user.balance.amount += margin + pnl;
     tradeToClose.status = 'CLOSED';
     tradeToClose.closePrice = closePrice;
-    tradeToClose.pnl = pnl * leverage;
+    tradeToClose.pnl = pnl;
     tradeToClose.closedAt = new Date();
 
     console.log(`Successfully closed trade ${orderId}. PnL: ${pnl}`);
@@ -229,10 +218,11 @@ export async function handleCloseTrade(
         closePrice: closePrice,
         leverage: leverage,
         pnl: tradeToClose.pnl,
-        liquidated: true,
+        liquidated: false,
         createdAt: new Date(),
         slippage: slippage,
         side: side,
+        reason: 'Closed by user',
       },
     });
 

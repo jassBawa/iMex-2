@@ -25,7 +25,6 @@ async function restoreSnapshot() {
     console.log('No snapshot found, starting fresh');
     lastSnapshotAt = Date.now();
   }
-  console.log(prices, users);
 }
 
 async function saveSnapshot() {
@@ -33,7 +32,6 @@ async function saveSnapshot() {
   if (now - lastSnapshotAt < SNAPSHOT_INTERVAL) return;
 
   const collection = mongodb.collection('engine-snapshots');
-  console.log(users);
   const snapshot = {
     id: 'dump',
     data: {
@@ -49,7 +47,6 @@ async function saveSnapshot() {
     { $set: snapshot },
     { upsert: true }
   );
-  console.log('Snapshot saved');
   lastSnapshotAt = now;
 }
 
