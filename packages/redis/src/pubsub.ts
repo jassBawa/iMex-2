@@ -1,5 +1,5 @@
 import type { RedisClientType } from 'redis';
-import redisClient from './index.js';
+import redisClient from './index';
 
 export const publisher: RedisClientType = redisClient.duplicate();
 

@@ -1,6 +1,12 @@
-import type { RedisClientType } from 'redis';
-import redisClient from './index.js';
+import { type RedisClientType } from 'redis';
+import redisClient from './index';
 
-export const redisStreamClient: RedisClientType = redisClient;
+export const priceUpdatePusher: RedisClientType = redisClient.duplicate();
 
-export default redisStreamClient;
+export const enginePuller: RedisClientType = redisClient.duplicate();
+
+export const enginePusher: RedisClientType = redisClient.duplicate();
+
+export const engineResponsePuller: RedisClientType = redisClient.duplicate();
+
+export const httpPusher: RedisClientType = redisClient.duplicate();

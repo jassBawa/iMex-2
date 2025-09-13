@@ -1,6 +1,8 @@
 import type { User } from '@prisma/client';
 import { RedisSubscriber } from './redis.service';
-import { redisStreamClient } from '@iMex/redis/redisStream';
+import { httpPusher } from '@iMex/redis/redis-streams';
+
+
 
 const redisSub = RedisSubscriber.getInstance();
 
@@ -15,8 +17,10 @@ export async function createUserInEngine(user: User) {
       balance: user.balance,
     }),
   };
-  await redisStreamClient.xAdd('stream:engine', '*', payload);
-  await redisSub.waitForMessage(requestId);
+
+  await httpPusher.xAdd('stream:engine', '*', payload);
+  const res = await redisSub.waitForMessage(requestId);
+  return res;
 }
 
 export async function getUserBalanceFromEngine(email: string) {
@@ -28,7 +32,8 @@ export async function getUserBalanceFromEngine(email: string) {
       email: email,
     }),
   };
-  await redisStreamClient.xAdd('stream:engine', '*', payload);
+
+  await httpPusher.xAdd('stream:engine', '*', payload);
   const res = await redisSub.waitForMessage(requestId);
 
   return res.balance;

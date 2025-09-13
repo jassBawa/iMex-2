@@ -1,8 +1,9 @@
-import { redisStreamClient } from '@iMex/redis/redisStream';
+import { enginePusher } from '@iMex/redis/redis-streams';
 
 (async () => {
-  await redisStreamClient.connect();
+  await enginePusher.connect();
 })();
+
 export const ACKNOWLEDGEMENT_STREAM = 'stream:engine:acknowledgement';
 
 export async function sendAcknowledgement(
@@ -20,7 +21,7 @@ export async function sendAcknowledgement(
       requestId,
     };
     console.log('message', message);
-    await redisStreamClient.xAdd(ACKNOWLEDGEMENT_STREAM, '*', message);
+    await enginePusher.xAdd(ACKNOWLEDGEMENT_STREAM, '*', message);
   } catch (err) {
     console.error(
       `[Acknowledgement Error] Failed to send ACK for request ID ${requestId}:`,

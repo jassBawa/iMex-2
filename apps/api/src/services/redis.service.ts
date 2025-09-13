@@ -1,12 +1,16 @@
-import { redisStreamClient } from '@iMex/redis/redisStream';
+import { engineResponsePuller } from '@iMex/redis/redis-streams';
 
 export const ACKNOWLEDGEMENT_QUEUE = 'stream:engine:acknowledgement';
+
+(async () => {
+  await engineResponsePuller.connect();
+})();
+
 export class RedisSubscriber {
   private static instance: RedisSubscriber;
   private callbacks: Record<string, { resolve: any; reject: any }>;
 
   private constructor() {
-    redisStreamClient.connect();
     this.callbacks = {};
     this.runLoop();
   }
@@ -20,7 +24,7 @@ export class RedisSubscriber {
 
   async runLoop() {
     while (1) {
-      const response = await redisStreamClient.xRead(
+      const response = await engineResponsePuller.xRead(
         {
           key: ACKNOWLEDGEMENT_QUEUE,
           id: '$',
@@ -29,6 +33,7 @@ export class RedisSubscriber {
       );
 
       if (response) {
+        // @ts-ignore
         const message = response[0]?.messages[0].message;
         const reqType = message.type;
         const gotId = message.requestId;
@@ -67,7 +72,6 @@ export class RedisSubscriber {
 
   waitForMessage(callbackId: string) {
     return new Promise<any>((resolve, reject) => {
-      // making the resolve function accessible
       this.callbacks[callbackId] = { resolve, reject };
       setTimeout(() => {
         // rejecting if not process in 5 seconds

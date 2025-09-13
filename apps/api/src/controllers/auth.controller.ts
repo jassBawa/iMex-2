@@ -24,8 +24,9 @@ export async function signupHandler(req: Request, res: Response) {
         email,
       },
     });
-
+    console.log(user);
     if (!user) {
+      console.log('in not user');
       user = await dbClient.user.create({
         data: {
           email: email,
@@ -33,8 +34,8 @@ export async function signupHandler(req: Request, res: Response) {
           balance: 5000,
         },
       });
-      createUserInEngine(user);
     }
+    createUserInEngine(user);
 
     if (process.env.NODE_ENV === 'production') {
       const { error } = await sendEmail(email, token);

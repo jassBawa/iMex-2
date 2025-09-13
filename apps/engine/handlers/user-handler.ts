@@ -51,14 +51,16 @@ export async function handleUserCreation(
       };
 
       users[payload.email] = newUser;
-      console.log(`Success: ${payload.email}`);
+      console.log(
+        `👤 [USER] Created user: ${payload.email} with balance: $${payload.balance}`
+      );
 
       await sendAcknowledgement(requestId, 'USER_CREATED_SUCCESS', {
         status: 'success',
         userId: newUser.id,
       });
     } else {
-      console.log(`User already exists with email: ${payload.email}`);
+      console.log(`⚠️ [USER] User already exists: ${payload.email}`);
 
       await sendAcknowledgement(requestId, 'USER_CREATION_FAILED', {
         reason: 'User already exists',
@@ -66,7 +68,7 @@ export async function handleUserCreation(
       });
     }
   } catch (err) {
-    console.error('Error in handleUserCreation:', err);
+    console.error('❌ [USER] Error creating user:', err);
     await sendAcknowledgement(requestId, 'USER_CREATION_ERROR', {
       message: err,
     });

@@ -1,21 +1,18 @@
 import { publisher } from '@iMex/redis/pubSub';
-import { redisStreamClient } from '@iMex/redis/redisStream';
+import { priceUpdatePusher } from '@iMex/redis/redis-streams';
+
+const ws = new WebSocket('wss://ws.backpack.exchange/');
 
 (async () => {
   await publisher.connect();
-  await redisStreamClient.connect();
+  await priceUpdatePusher.connect();
 })();
-const ws = new WebSocket('wss://ws.backpack.exchange/');
 
 let assets: Record<string, {}> = {};
 
 const message = {
   method: 'SUBSCRIBE',
-  params: [
-    'bookTicker.BTC_USDC_PERP',
-    'bookTicker.ETH_USDC_PERP',
-    'bookTicker.SOL_USDC_PERP',
-  ],
+  params: ['bookTicker.BTC_USDC', 'bookTicker.ETH_USDC', 'bookTicker.SOL_USDC'],
   id: 1,
 };
 
@@ -49,9 +46,8 @@ setInterval(() => {
     data: JSON.stringify(assets),
     type: 'PRICE_UPDATE',
   };
-  console.log(data);
   publisher.publish('ws:price:update', JSON.stringify(data));
-  redisStreamClient.xAdd('stream:engine', '*', data);
+  priceUpdatePusher.xAdd('stream:engine', '*', data);
 }, 4000);
 
 interface Trade {

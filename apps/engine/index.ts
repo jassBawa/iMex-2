@@ -1,30 +1,119 @@
-import { redisStreamClient } from '@iMex/redis/redisStream';
-import { startEngine } from './services/engine.service';
+import { enginePuller } from '@iMex/redis/redis-streams';
+import { processMessage } from './handlers';
+import { prices, users } from './memoryDb';
+import { mongodb } from './utils/dbClient';
 
-async function initializeEngine() {
+const STREAM_KEY = 'stream:engine';
+const GROUP_NAME = 'group';
+const CONSUMER_NAME = 'consumer-1';
+const SNAPSHOT_INTERVAL = 15_000; // 10s
+
+let lastSnapshotAt: number;
+let lastItemReadId = '';
+
+async function restoreSnapshot() {
+  const collection = mongodb.collection('engine-snapshots');
+  const result = await collection.findOne({ id: 'dump' });
+
+  if (result) {
+    Object.assign(prices, result.data.prices);
+    Object.assign(users, result.data.users);
+    lastSnapshotAt = result.data.lastSnapshotAt;
+    lastItemReadId = result.data.lastItemReadId;
+    console.log('Restored snapshot from DB');
+  } else {
+    console.log('No snapshot found, starting fresh');
+    lastSnapshotAt = Date.now();
+  }
+  console.log(prices, users);
+}
+
+async function saveSnapshot() {
+  const now = Date.now();
+  if (now - lastSnapshotAt < SNAPSHOT_INTERVAL) return;
+
+  const collection = mongodb.collection('engine-snapshots');
+  console.log(users);
+  const snapshot = {
+    id: 'dump',
+    data: {
+      prices,
+      users,
+      lastSnapshotAt: now,
+      lastItemReadId,
+    },
+  };
+
+  await collection.updateOne(
+    { id: 'dump' },
+    { $set: snapshot },
+    { upsert: true }
+  );
+  console.log('Snapshot saved');
+  lastSnapshotAt = now;
+}
+
+async function startEngine() {
+  await enginePuller.connect();
+
   try {
-    if (!redisStreamClient.isOpen) {
-      await redisStreamClient.connect();
+    await enginePuller.xGroupCreate(STREAM_KEY, GROUP_NAME, '0', {
+      MKSTREAM: true,
+    });
+  } catch (err) {
+    console.log('Consumer group exists');
+  }
+
+  await restoreSnapshot();
+
+  const groups = await enginePuller.xInfoGroups(STREAM_KEY);
+  const lastDeliveredId = groups[0]?.['last-delivered-id']?.toString();
+
+  if (
+    lastDeliveredId &&
+    lastItemReadId !== '' &&
+    lastItemReadId !== lastDeliveredId
+  ) {
+    await replay(lastItemReadId, lastDeliveredId);
+  }
+
+  while (true) {
+    if (lastItemReadId) {
+      await enginePuller.xAck(STREAM_KEY, GROUP_NAME, lastItemReadId);
     }
 
-    await startEngine();
-  } catch (error) {
-    console.error('Engine initialization failed:', error);
-    process.exit(1);
+    const response = (await enginePuller.xReadGroup(
+      GROUP_NAME,
+      CONSUMER_NAME,
+      { key: STREAM_KEY, id: '>' },
+      { BLOCK: 0 }
+    )) as any[];
+
+    if (response) {
+      const msg = response[0].messages[0];
+      lastItemReadId = msg.id;
+
+      await processMessage(msg);
+      await saveSnapshot();
+    }
   }
 }
 
-redisStreamClient.on('error', (error) => {
-  console.error('Redis connection error:', error);
-});
+async function replay(fromId: string, toId: string) {
+  const entries = await enginePuller.xRange(STREAM_KEY, fromId, toId);
+  const missed = entries.slice(1);
 
-process.on('SIGINT', async () => {
-  if (redisStreamClient.isOpen) await redisStreamClient.quit();
-});
+  for (const entry of missed) {
+    try {
+      const msg = entry.message;
+      // to be fixed: dont' send acknolwedgmenet here
+      // await processMessage(msg);
 
-process.on('SIGTERM', async () => {
-  if (redisStreamClient.isOpen) await redisStreamClient.quit();
-});
+      lastItemReadId = entry.id;
+    } catch (err) {
+      console.error('Replay failed', err);
+    }
+  }
+}
 
-// Initialize the engine
-initializeEngine();
+startEngine();

@@ -1,5 +1,5 @@
 {
-  "name": "@iMex/redis",
+  "name": "@iMex/redisclient",
   "module": "index.ts",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -7,7 +7,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./pubSub": "./src/pubsub.ts",
-    "./redisStream": "./src/redisStreams.ts"
+    "./redis-streams": "./src/redisStreams.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"

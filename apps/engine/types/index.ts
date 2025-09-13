@@ -34,9 +34,9 @@ export interface User {
 }
 
 export enum AssetSymbols {
-  SOL = 'SOL_USDC',
-  ETH = 'ETH_USDC',
-  BTC = 'BTC_USDC',
+  SOL = 'SOL_USDC_PERP',
+  ETH = 'ETH_USDC_PERP',
+  BTC = 'BTC_USDC_PERP',
 }
 
 export type PriceObj = Partial<{

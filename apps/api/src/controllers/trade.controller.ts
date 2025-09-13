@@ -2,8 +2,12 @@ import type { Request, Response } from 'express';
 import { RedisSubscriber } from '../services/redis.service';
 import { closeOrderSchema, openOrderSchema } from '../validations/ordersSchema';
 import { randomUUID } from 'crypto';
-import client from '@imex/db';
-import { redisStreamClient } from '@iMex/redis/redisStream';
+import dbClient from '@imex/db';
+import { httpPusher } from '@iMex/redis/redis-streams';
+
+(async () => {
+  await httpPusher.connect();
+})();
 
 export const CREATE_ORDER_QUEUE = 'stream:engine';
 
@@ -49,7 +53,7 @@ export async function createOrder(req: Request, res: Response) {
       }),
     };
 
-    await redisStreamClient.xAdd(CREATE_ORDER_QUEUE, '*', payload);
+    await httpPusher.xAdd(CREATE_ORDER_QUEUE, '*', payload);
 
     const { tradeDetails } = await redisSubscriber.waitForMessage(requestId);
 
@@ -106,7 +110,7 @@ export async function fetchCloseOrders(req: Request, res: Response) {
   const email = req.user;
 
   try {
-    const user = await client.user.findFirst({
+    const user = await dbClient.user.findFirst({
       where: {
         email,
       },
@@ -116,7 +120,7 @@ export async function fetchCloseOrders(req: Request, res: Response) {
       res.status(404).json({ message: 'User not found' });
       return;
     }
-    const orders = await client.existingTrade.findMany({
+    const orders = await dbClient.existingTrade.findMany({
       where: {
         userId: user.id,
       },
@@ -142,7 +146,7 @@ export async function fetchOpenOrders(req: Request, res: Response) {
         email: email,
       }),
     };
-    await redisStreamClient.xAdd(CREATE_ORDER_QUEUE, '*', payload);
+    await httpPusher.xAdd(CREATE_ORDER_QUEUE, '*', payload);
     const { orders } = await redisSubscriber.waitForMessage(requestId);
 
     res.status(200).json({ orders });
