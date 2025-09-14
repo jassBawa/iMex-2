@@ -1,4 +1,4 @@
-import { subscriber } from '@iMex/redis/pubSub';
+import { subscriber } from '@imex/redis/pubSub';
 import { WebSocketServer } from 'ws';
 
 const wss = new WebSocketServer({ port: Number(process.env.WS_PORT!) });

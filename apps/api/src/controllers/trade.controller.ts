@@ -3,7 +3,7 @@ import { RedisSubscriber } from '../services/redis.service';
 import { closeOrderSchema, openOrderSchema } from '../validations/ordersSchema';
 import { randomUUID } from 'crypto';
 import dbClient from '@imex/db';
-import { httpPusher } from '@iMex/redis/redis-streams';
+import { httpPusher } from '@imex/redis/redis-streams';
 
 (async () => {
   await httpPusher.connect();

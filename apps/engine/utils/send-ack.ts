@@ -1,4 +1,4 @@
-import { enginePusher } from '@iMex/redis/redis-streams';
+import { enginePusher } from '@imex/redis/redis-streams';
 
 (async () => {
   await enginePusher.connect();

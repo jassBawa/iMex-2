@@ -1,4 +1,4 @@
-import { engineResponsePuller } from '@iMex/redis/redis-streams';
+import { engineResponsePuller } from '@imex/redis/redis-streams';
 
 export const ACKNOWLEDGEMENT_QUEUE = 'stream:engine:acknowledgement';
 

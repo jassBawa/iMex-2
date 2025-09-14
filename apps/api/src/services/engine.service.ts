@@ -1,6 +1,6 @@
 import type { User } from '@prisma/client';
 import { RedisSubscriber } from './redis.service';
-import { httpPusher } from '@iMex/redis/redis-streams';
+import { httpPusher } from '@imex/redis/redis-streams';
 
 const redisSub = RedisSubscriber.getInstance();
 

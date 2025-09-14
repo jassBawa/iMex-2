@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@imex/db": "workspace:*",
-    "@iMex/redis": "workspace:*",
+    "@imex/redis": "workspace:*",
     "mongodb": "^6.19.0"
   }
 }

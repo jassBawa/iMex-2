@@ -1,5 +1,5 @@
-import { publisher } from '@iMex/redis/pubSub';
-import { priceUpdatePusher } from '@iMex/redis/redis-streams';
+import { publisher } from '@imex/redis/pubSub';
+import { priceUpdatePusher } from '@imex/redis/redis-streams';
 
 const ws = new WebSocket('wss://ws.backpack.exchange/');
 

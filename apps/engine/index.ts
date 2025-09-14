@@ -1,4 +1,4 @@
-import { enginePuller } from '@iMex/redis/redis-streams';
+import { enginePuller } from '@imex/redis/redis-streams';
 import { processMessage } from './handlers';
 import { prices, users } from './memoryDb';
 import { mongodb } from './utils/dbClient';
