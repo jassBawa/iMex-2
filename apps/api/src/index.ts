@@ -3,12 +3,16 @@ import cors from 'cors';
 import mainRouter from './routes';
 import cookieParser from 'cookie-parser';
 
+const PORT = process.env.PORT || 4000;
+
 const app = express();
+
+const FE_URL = process.env.CORS_ORIGIN || 'http://localhost:3000';
 
 app.use(express.json());
 app.use(
   cors({
-    origin: 'http://localhost:3000',
+    origin: FE_URL,
     credentials: true,
   })
 );
@@ -17,6 +21,6 @@ app.use(cookieParser());
 
 app.use('/api/v1', mainRouter);
 
-app.listen(4000, () => {
+app.listen(PORT, () => {
   console.log('Server started');
 });

@@ -48,7 +48,7 @@ setInterval(() => {
   };
   publisher.publish('ws:price:update', JSON.stringify(data));
   priceUpdatePusher.xAdd('stream:engine', '*', data);
-}, 4000);
+}, 100);
 
 interface Trade {
   A: string;

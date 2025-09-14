@@ -43,9 +43,9 @@ export async function signupHandler(req: Request, res: Response) {
         res.status(400).json({ error });
       }
     } else {
-      console.log(
-        `http://localhost:4000/api/v1/auth/signin/verify?token=${token}`
-      );
+      const url =
+        process.env.API_BASE_URL + '/auth/signin/verify?token=' + token;
+      console.log(url);
     }
 
     res.status(201).json({ message: 'Email Sent' });

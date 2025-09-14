@@ -1,0 +1,92 @@
+services:
+  api:
+    build:
+      context: ./
+      dockerfile: './docker/api.dockerfile'
+      args:
+        DATABASE_URL: ${DATABASE_URL}
+    ports:
+      - '4000:4000'
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      RESEND_API: ${RESEND_API}
+      JWT_SECRET: ${JWT_SECRET}
+      HTTP_PORT: ${HTTP_PORT}
+      API_BASE_URL: ${API_BASE_URL}
+      DATABASE_URL: ${DATABASE_URL}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      REDIS_URL: ${REDIS_URL}
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  ws:
+    build:
+      context: ./
+      dockerfile: './docker/ws.dockerfile'
+    ports:
+      - '8080:8080'
+    environment:
+      WS_PORT: ${WS_PORT}
+      REDIS_URL: ${REDIS_URL}
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  engine:
+    build:
+      context: ./
+      dockerfile: './docker/engine.dockerfile'
+      args:
+        DATABASE_URL: ${DATABASE_URL}
+    environment:
+      MONGODB_URL: ${MONGODB_URL}
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+    depends_on:
+      redis:
+        condition: service_healthy
+      # mongo:
+      #   condition: service_healthy
+
+  poller:
+    build:
+      context: ./
+      dockerfile: './docker/poller.dockerfile'
+    environment:
+      REDIS_URL: ${REDIS_URL}
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis
+    container_name: imex-redis
+    restart: always
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # mongo:
+  #   image: mongo
+  #   container_name: imex-mongo
+  #   restart: always
+  #   ports:
+  #     - '27017:27017'
+  #   volumes:
+  #     - mongo_data:/data/db
+  #   healthcheck:
+  #     test: [ "CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand('ping').ok\" | grep 1" ]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+volumes:
+  redis_data:
+  # mongo_data:
