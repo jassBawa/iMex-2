@@ -1,5 +1,6 @@
 // hooks/useWebSocket.ts
 import { useEffect } from 'react';
+import { setSymbolPrice } from '@/lib/price-store';
 
 export interface TradeMessage {
   type: 'ASK' | 'BID';
@@ -44,6 +45,9 @@ export function useWebSocket(onMessage: (msg: TradeMessage) => void) {
               const bid = p.sellPrice / scale; // price to sell at
 
               const symbol = mapPairToUiSymbol(pair);
+
+              // Update shared price store
+              setSymbolPrice(symbol, { ask, bid, time: now });
 
               const askMsg: TradeMessage = {
                 type: 'ASK',

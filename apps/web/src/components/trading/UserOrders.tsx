@@ -78,8 +78,7 @@ const Orders = () => {
     );
     const closePrice = Number(o.closePrice ?? 0);
     const lev = o.leverage ?? o.lev ?? 1;
-    const leverage =
-      typeof lev === 'number' ? `${Math.round(lev / 100)}x` : String(lev);
+    const leverage = typeof lev === 'number' ? `${lev}x` : String(lev);
     const status = o.status || (o.closedAt ? 'closed' : 'open');
     const timestamp = fmtTs(o.createdAt || o.time || Date.now());
     const total =

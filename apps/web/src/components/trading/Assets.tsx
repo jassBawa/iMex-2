@@ -1,8 +1,7 @@
 'use client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TradeMessage, useWebSocket } from '@/hooks/useWebsocket';
 import { useTrading } from '@/providers/trading-context';
-import { useRef } from 'react';
+import { useSymbolPrice } from '@/lib/price-store';
 
 const assets = [
   { symbol: 'BTCUSDT', name: 'Bitcoin' },
@@ -15,21 +14,43 @@ const formatPrice = (price: number) =>
     maximumFractionDigits: price < 1 ? 4 : 2,
   });
 
+function AssetRow({
+  symbol,
+  name,
+  onSelect,
+}: {
+  symbol: string;
+  name: string;
+  onSelect: (s: string) => void;
+}) {
+  const price = useSymbolPrice(symbol);
+  const bid = price?.bid ?? null;
+  const ask = price?.ask ?? null;
+  return (
+    <div
+      onClick={() => onSelect(symbol)}
+      className="w-full grid grid-cols-3 gap-2 items-center py-3 px-3 rounded-lg hover:bg-accent/30 cursor-pointer transition-all duration-200 border border-transparent hover:border-accent/50"
+    >
+      <div className="space-y-1">
+        <div className="font-semibold text-sm">{symbol}</div>
+        <div className="text-xs text-muted-foreground truncate">{name}</div>
+      </div>
+      <div className="text-right">
+        <div className="text-price text-sm font-semibold text-success">
+          {bid === null ? '-' : formatPrice(bid)}
+        </div>
+      </div>
+      <div className="text-right">
+        <div className="text-price text-sm font-semibold text-danger">
+          {ask === null ? '-' : formatPrice(ask)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const Assets = () => {
-  // Mock assets data
-  const bidRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const askRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const { setSymbol } = useTrading();
-
-  useWebSocket((data: TradeMessage) => {
-    const { symbol, type, price } = data;
-
-    if (type === 'BID' && bidRefs.current[symbol]) {
-      bidRefs.current[symbol]!.textContent = formatPrice(price);
-    } else if (type === 'ASK' && askRefs.current[symbol]) {
-      askRefs.current[symbol]!.textContent = formatPrice(price);
-    }
-  });
 
   return (
     <Card className="trading-card h-full">
@@ -44,43 +65,12 @@ const Assets = () => {
       <CardContent>
         <div className="space-y-1 max-h-96 overflow-y-auto">
           {assets.map((asset) => (
-            <div
-              onClick={() => setSymbol(asset.symbol)}
+            <AssetRow
               key={asset.symbol}
-              className="w-full grid grid-cols-3 gap-2 items-center py-3 px-3 rounded-lg hover:bg-accent/30 cursor-pointer transition-all duration-200 border border-transparent hover:border-accent/50"
-            >
-              {/* Asset Info */}
-              <div className="space-y-1">
-                <div className="font-semibold text-sm">{asset.symbol}</div>
-                <div className="text-xs text-muted-foreground truncate">
-                  {asset.name}
-                </div>
-              </div>
-
-              {/* Bid */}
-              <div className="text-right">
-                <div
-                  ref={(el) => {
-                    bidRefs.current[asset.symbol] = el;
-                  }}
-                  className="text-price text-sm font-semibold text-success"
-                >
-                  -
-                </div>
-              </div>
-
-              {/* Ask */}
-              <div className="text-right">
-                <div
-                  ref={(el) => {
-                    askRefs.current[asset.symbol] = el;
-                  }}
-                  className="text-price text-sm font-semibold text-danger"
-                >
-                  -
-                </div>
-              </div>
-            </div>
+              symbol={asset.symbol}
+              name={asset.name}
+              onSelect={setSymbol}
+            />
           ))}
         </div>
       </CardContent>

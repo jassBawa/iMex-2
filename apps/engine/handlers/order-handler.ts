@@ -223,6 +223,7 @@ export async function handleCloseTrade(
         slippage: slippage,
         side: side,
         reason: 'Closed by user',
+        quantity: quantity,
       },
     });
 
@@ -265,7 +266,6 @@ export async function handleFetchOpenOrders(
     }
 
     const orders = user.trades.filter((trade) => trade.status === 'OPEN');
-    console.log(orders);
     await sendAcknowledgement(requestId, 'TRADE_FETCH_ACKNOWLEDGEMENT', {
       status: 'success',
       orders: orders,

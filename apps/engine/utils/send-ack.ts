@@ -12,7 +12,6 @@ export async function sendAcknowledgement(
   payload: Record<string, any> = {}
 ) {
   try {
-    console.log('ENTERED SEND ACKNOWLEDGEMENT_STREAM');
     const message = {
       payload: JSON.stringify({
         ...payload,

@@ -57,6 +57,7 @@ export async function signupHandler(req: Request, res: Response) {
 
 export async function signInVerify(req: Request, res: Response) {
   try {
+    console.log('in signInVerify');
     const token = req.query.token?.toString();
 
     if (!token) {
@@ -66,9 +67,9 @@ export async function signInVerify(req: Request, res: Response) {
       });
       return;
     }
-
+    console.log('token', token);
     const decodedToken = jwt.verify(token, process.env.JWT_SECRET!);
-
+    console.log('decodedToken', decodedToken);
     if (!decodedToken) {
       res.status(400).json({ message: 'Invalid token' });
       return;
@@ -86,7 +87,10 @@ export async function signInVerify(req: Request, res: Response) {
       maxAge: 2 * 24 * 60 * 60 * 1000,
     });
 
-    return res.redirect(process.env.FRONTEND_URL! + '/trade');
+    console.log('in signInVerify redirect');
+    res.redirect(process.env.CORS_ORIGIN! + '/trade');
+    // res.status(200).json({ message: 'Login successful' });
+    // res.redirect("http://localhost:3000/trade");
   } catch (err: any) {
     console.log(err);
     res.status(500).json({ message: 'Interal server error' });

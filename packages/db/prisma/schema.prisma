@@ -21,10 +21,11 @@ model ExistingTrade {
   closePrice Float
   leverage   Float
   pnl        Float
+  slippage   Float
+  quantity   Float
   side       String
   asset      String
   liquidated Boolean
-  slippage   Int
   userId     String
   reason     String?
   user       User     @relation(fields: [userId], references: [id])

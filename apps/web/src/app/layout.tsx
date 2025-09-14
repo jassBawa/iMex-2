@@ -4,6 +4,7 @@ import './globals.css';
 import { QueryProvider } from '@/providers/query-provider';
 import { TradingProvider } from '@/providers/trading-context';
 import { ThemeProvider } from '@/components/theme-provider';
+import { PriceFeed } from '@/providers/price-feed';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -27,7 +28,10 @@ export default function RootLayout({
       >
         <QueryProvider>
           <TradingProvider>
-            <body className={inter.className}>{children}</body>
+            <body className={inter.className}>
+              <PriceFeed />
+              {children}
+            </body>
           </TradingProvider>
         </QueryProvider>
       </ThemeProvider>

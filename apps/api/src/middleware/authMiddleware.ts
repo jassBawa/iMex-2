@@ -33,7 +33,6 @@ export async function authMiddleware(
     }
 
     req.user = payload.email;
-    console.log(req.user);
     next();
   } catch (err) {
     console.log(err);

@@ -51,9 +51,6 @@ export async function handleUserCreation(
       };
 
       users[payload.email] = newUser;
-      console.log(
-        `👤 [USER] Created user: ${payload.email} with balance: $${payload.balance}`
-      );
 
       await sendAcknowledgement(requestId, 'USER_CREATED_SUCCESS', {
         status: 'success',

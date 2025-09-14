@@ -12,11 +12,11 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import { useCreateOrder } from '@/hooks/useCreateOrder';
-import { useWebSocket } from '@/hooks/useWebsocket';
 import { useTrading } from '@/providers/trading-context';
 import { TrendingDown, TrendingUp, BarChart3 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import z from 'zod';
+import { useSymbolPrice } from '@/lib/price-store';
 
 const orderSchema = z.object({
   symbol: z.string().min(1, 'Symbol is required'),
@@ -60,8 +60,8 @@ const fmtUSD = (n: number) =>
 export default function MobileTradingDrawer() {
   const { symbol } = useTrading();
 
-  // live price
-  const [currentPrice, setCurrentPrice] = useState<number>(0);
+  // live price from shared store
+  const live = useSymbolPrice(symbol);
 
   // shared inputs
   const [buyQty, setBuyQty] = useState<string>('');
@@ -71,22 +71,20 @@ export default function MobileTradingDrawer() {
   const orderMutation = useCreateOrder();
   const [error, setError] = useState<string | null>(null);
 
-  // WebSocket: update price
-  useWebSocket((msg: TradeMsg) => {
-    if (msg.symbol !== symbol) return;
-    setCurrentPrice(msg.price);
-  });
+  // derive current bid/ask
+  const currentAsk = live?.ask ?? 0;
+  const currentBid = live?.bid ?? 0;
 
   // margin = price × qty
   const buyMargin = useMemo(() => {
     const qty = toNumber(buyQty);
-    return currentPrice && qty ? currentPrice * qty : 0;
-  }, [buyQty, currentPrice]);
+    return currentAsk && qty ? currentAsk * qty : 0;
+  }, [buyQty, currentAsk]);
 
   const sellMargin = useMemo(() => {
     const qty = toNumber(sellQty);
-    return currentPrice && qty ? currentPrice * qty : 0;
-  }, [sellQty, currentPrice]);
+    return currentBid && qty ? currentBid * qty : 0;
+  }, [sellQty, currentBid]);
 
   // position size = margin × leverage
   const buyPositionSize = useMemo(
@@ -105,19 +103,16 @@ export default function MobileTradingDrawer() {
       const qty = side === 'BUY' ? toNumber(buyQty) : toNumber(sellQty);
       const uiSide = side === 'BUY' ? 'LONG' : 'SHORT';
       const asset = symbol.replace('USDT', '_USDC');
-      const tradeOpeningPrice = currentPrice || 0;
+      const tradeOpeningPrice = side === 'BUY' ? currentAsk : currentBid;
 
       // Convert slippage percentage to basis points (1% = 100 basis points)
       const slippageInBasisPoints = slippage * 100;
-
-      // Leverage expected as whole number (e.g., 10000 for 100x) per spec
-      const scaledLeverage = leverage * 100;
 
       await orderMutation.mutateAsync({
         asset,
         side: uiSide as 'LONG' | 'SHORT',
         quantity: qty,
-        leverage: scaledLeverage,
+        leverage: leverage,
         slippage: slippageInBasisPoints,
         tradeOpeningPrice,
       });
@@ -192,18 +187,37 @@ export default function MobileTradingDrawer() {
                 {/* Leverage */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">Leverage</Label>
+                    <Label className="text-sm font-medium">
+                      Leverage (1-10000)
+                    </Label>
                     <span className="text-sm font-semibold text-primary">
-                      {leverage}x
+                      {leverage}
                     </span>
                   </div>
                   <Slider
                     min={1}
-                    max={100}
+                    max={10000}
                     step={1}
                     value={[leverage]}
                     onValueChange={(v) => setLeverage(v[0] ?? 1)}
                   />
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={10000}
+                      step={1}
+                      value={String(leverage)}
+                      onChange={(e) => {
+                        const v = Math.max(
+                          1,
+                          Math.min(10000, Number(e.target.value) || 1)
+                        );
+                        setLeverage(v);
+                      }}
+                      className="w-24"
+                    />
+                  </div>
                 </div>
 
                 {/* Slippage */}
@@ -285,18 +299,37 @@ export default function MobileTradingDrawer() {
                 {/* Leverage */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">Leverage</Label>
+                    <Label className="text-sm font-medium">
+                      Leverage (1-10000)
+                    </Label>
                     <span className="text-sm font-semibold text-primary">
-                      {leverage}x
+                      {leverage}
                     </span>
                   </div>
                   <Slider
                     min={1}
-                    max={100}
+                    max={10000}
                     step={1}
                     value={[leverage]}
                     onValueChange={(v) => setLeverage(v[0] ?? 1)}
                   />
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={10000}
+                      step={1}
+                      value={String(leverage)}
+                      onChange={(e) => {
+                        const v = Math.max(
+                          1,
+                          Math.min(10000, Number(e.target.value) || 1)
+                        );
+                        setLeverage(v);
+                      }}
+                      className="w-24"
+                    />
+                  </div>
                 </div>
 
                 {/* Slippage */}

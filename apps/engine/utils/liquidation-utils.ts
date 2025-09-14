@@ -23,17 +23,15 @@ export async function closeOrder(
       ? currentPrice.sellPrice / 10 ** currentPrice.decimal
       : currentPrice.buyPrice / 10 ** currentPrice.decimal;
 
-
   user.balance.amount += margin + realizedPnl;
   closedTrade.status = 'CLOSED';
   closedTrade.closePrice = closePrice;
   closedTrade.pnl = realizedPnl;
   closedTrade.closedAt = new Date();
 
-  console.log(`Trade ${orderId} closed. Reason: ${reason}. PnL: ${realizedPnl}`);
-
   await prisma.existingTrade.create({
     data: {
+      quantity,
       side,
       userId: user.id,
       asset,
@@ -56,8 +54,6 @@ export async function closeOrder(
       balance: user.balance.amount,
     },
   });
-
-  console.log(`Trade ${orderId} closed. Reason: ${reason}.`);
 }
 
 export function calculatePnl(order: Trade, closePrice: number): number {

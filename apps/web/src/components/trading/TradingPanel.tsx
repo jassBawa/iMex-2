@@ -117,13 +117,12 @@ export default function TradingPanel() {
       const slippageInBasisPoints = slippage * 100;
 
       // Leverage expected as whole number (e.g., 10000 for 100x) per spec
-      const scaledLeverage = leverage * 100;
 
       await orderMutation.mutateAsync({
         asset,
         side: uiSide as 'LONG' | 'SHORT',
         quantity: qty,
-        leverage: scaledLeverage,
+        leverage: leverage,
         slippage: slippageInBasisPoints,
         tradeOpeningPrice,
       });
@@ -188,18 +187,37 @@ export default function TradingPanel() {
               {/* Leverage */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">Leverage</Label>
+                  <Label className="text-sm font-medium">
+                    Leverage (1-10000)
+                  </Label>
                   <span className="text-sm font-semibold text-primary">
-                    {leverage}x
+                    {leverage}
                   </span>
                 </div>
                 <Slider
                   min={1}
-                  max={100}
+                  max={10000}
                   step={1}
                   value={[leverage]}
                   onValueChange={(v) => setLeverage(v[0] ?? 1)}
                 />
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10000}
+                    step={1}
+                    value={String(leverage)}
+                    onChange={(e) => {
+                      const v = Math.max(
+                        1,
+                        Math.min(10000, Number(e.target.value) || 1)
+                      );
+                      setLeverage(v);
+                    }}
+                    className="w-24"
+                  />
+                </div>
               </div>
 
               {/* Slippage */}
@@ -290,6 +308,24 @@ export default function TradingPanel() {
                   value={[leverage]}
                   onValueChange={(v) => setLeverage(v[0] ?? 1)}
                 />
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={100}
+                    step={1}
+                    value={String(leverage)}
+                    onChange={(e) => {
+                      const v = Math.max(
+                        1,
+                        Math.min(100, Number(e.target.value) || 1)
+                      );
+                      setLeverage(v);
+                    }}
+                    className="w-24"
+                  />
+                  <span className="text-sm text-muted-foreground">x</span>
+                </div>
               </div>
 
               {/* Slippage */}
