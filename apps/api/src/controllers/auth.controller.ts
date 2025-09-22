@@ -83,10 +83,11 @@ export async function signInVerify(req: Request, res: Response) {
 
     res.cookie('token', sessionToken, {
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite: 'none',
+      secure: true,
+      domain: '.jasscodes.in',
       maxAge: 2 * 24 * 60 * 60 * 1000,
     });
-
     console.log('in signInVerify redirect');
     res.redirect(process.env.CORS_ORIGIN! + '/trade');
     // res.status(200).json({ message: 'Login successful' });
