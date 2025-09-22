@@ -2,6 +2,8 @@ FROM oven/bun:latest AS base
 
 WORKDIR /usr/src/app
 
+RUN apt-get update -y && apt-get install -y openssl
+
 COPY package.json bun.lockb ./
 COPY turbo.json ./
 

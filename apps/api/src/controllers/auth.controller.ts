@@ -86,6 +86,7 @@ export async function signInVerify(req: Request, res: Response) {
       sameSite: 'none',
       secure: true,
       domain: '.jasscodes.in',
+      // domain: 'localhost',
       maxAge: 2 * 24 * 60 * 60 * 1000,
     });
     console.log('in signInVerify redirect');
