@@ -1,51 +1,39 @@
 import { motion } from 'motion/react';
+import Link from 'next/link';
 import { FeatureCard } from '@/components/landing/feature-card';
 import { Smartphone, BarChart3, Shield, Zap } from 'lucide-react';
 
 const Features = () => {
   const features = [
     {
-      icon: Smartphone,
-      title: 'Mobile Trading',
-      description: 'Trade anywhere with our mobile app',
-    },
-    {
       icon: BarChart3,
-      title: 'Advanced Charts',
-      description: 'Professional tools and indicators',
+      title: 'Real-Time Trading',
+      description:
+        'Execute orders with sub-millisecond latency using our high-performance engine',
     },
     {
       icon: Shield,
-      title: 'Secure & Regulated',
-      description: 'Your funds are protected',
+      title: 'Risk Management',
+      description:
+        'Automated liquidation system with customizable stop-loss and take-profit',
     },
     {
       icon: Zap,
-      title: 'Fast Execution',
-      description: 'Lightning-fast order processing',
+      title: 'Live Price Feeds',
+      description:
+        'Direct connection to exchange APIs for real-time market data',
+    },
+    {
+      icon: Smartphone,
+      title: 'Web Interface',
+      description:
+        'Clean, responsive trading interface accessible from any device',
     },
   ];
 
   return (
-    <section
-      className="py-20 bg-muted/10 relative overflow-hidden"
-      id="features"
-    >
-      {/* Background decoration */}
-      <motion.div
-        className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-l from-primary/5 to-transparent rounded-full blur-3xl"
-        animate={{
-          scale: [1, 1.2, 1],
-          opacity: [0.3, 0.1, 0.3],
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-      />
-
-      <div className="container mx-auto px-4 relative z-10">
+    <section className="py-20 border-t border-border/50" id="features">
+      <div className="container mx-auto px-4">
         <motion.div
           className="text-center space-y-4 mb-16"
           initial={{ opacity: 0, y: 30 }}
@@ -54,22 +42,24 @@ const Features = () => {
           transition={{ duration: 0.8 }}
         >
           <motion.h2
-            className="text-4xl lg:text-5xl font-bold text-foreground"
+            className="text-3xl lg:text-4xl font-semibold text-black font-dm-sans tracking-tight"
             initial={{ opacity: 0, scale: 0.9 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            Why Choose TradePro
+            Professional Trading Infrastructure
           </motion.h2>
           <motion.p
-            className="text-xl text-muted-foreground max-w-2xl mx-auto"
+            className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed font-ibm-plex-mono"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.4 }}
           >
-            Professional trading platform built for modern traders
+            Built with institutional-grade technology. Microservices
+            architecture, Redis streams, and real-time risk management for
+            serious traders.
           </motion.p>
         </motion.div>
 
@@ -78,9 +68,32 @@ const Features = () => {
             <FeatureCard key={index} {...feature} index={index} />
           ))}
         </div>
+
+        <div className="mt-12 flex justify-center">
+          <ButtonRow />
+        </div>
       </div>
     </section>
   );
 };
 
 export default Features;
+
+const ButtonRow = () => {
+  return (
+    <div className="flex items-center gap-4">
+      <Link
+        href="/trade"
+        className="text-sm px-6 py-3 rounded-md border border-gray-200 text-black hover:bg-gray-50 transition-colors font-dm-sans font-medium"
+      >
+        Start Trading
+      </Link>
+      <Link
+        href="/docs"
+        className="text-sm px-6 py-3 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-dm-sans font-medium"
+      >
+        View Documentation
+      </Link>
+    </div>
+  );
+};
