@@ -77,6 +77,7 @@ export async function handleOpenTrade(
       await sendAcknowledgement(requestId, 'TRADE_OPEN_FAILED', {
         reason: 'User not found',
       });
+      return;
     }
     const {
       asset,
@@ -104,19 +105,22 @@ export async function handleOpenTrade(
         ? currentPrice.buyPrice / 10 ** currentPrice.decimal
         : currentPrice.sellPrice / 10 ** currentPrice.decimal;
 
-    const slippedValue =
-      Math.abs((tradeOpeningPrice - openPrice) / openPrice) * 100;
-
-    console.log('slippedValue', 'slippedValue');
-
-    console.log(slippedValue, slippage);
-    if (slippedValue > slippage / 100) {
+    const slippedFraction = Math.abs(
+      (tradeOpeningPrice - openPrice) / openPrice
+    );
+    if (slippedFraction > slippage / 100) {
       await sendAcknowledgement(requestId, 'TRADE_SLIPPAGE_MAX_EXCEEDED', {
         message: 'Price changed by alot',
       });
       return;
     }
-    const marginRequired = quantity * openPrice;
+    if (!leverage || leverage <= 0) {
+      await sendAcknowledgement(requestId, 'TRADE_OPEN_FAILED', {
+        reason: 'Invalid leverage',
+      });
+      return;
+    }
+    const marginRequired = (quantity * openPrice) / leverage;
 
     if (user.balance.amount < marginRequired) {
       await sendAcknowledgement(requestId, 'TRADE_OPEN_FAILED', {
@@ -263,6 +267,7 @@ export async function handleFetchOpenOrders(
       await sendAcknowledgement(requestId, 'TRADE_FETCH_FAILED', {
         reason: 'User not found',
       });
+      return;
     }
 
     const orders = user.trades.filter((trade) => trade.status === 'OPEN');

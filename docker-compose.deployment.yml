@@ -7,6 +7,7 @@ services:
         DATABASE_URL: ${DATABASE_URL}
     ports:
       - '4000:4000'
+    restart: unless-stopped
     environment:
       NODE_ENV: ${NODE_ENV}
       RESEND_API: ${RESEND_API}
@@ -29,6 +30,7 @@ services:
     environment:
       WS_PORT: ${WS_PORT}
       REDIS_URL: ${REDIS_URL}
+    restart: unless-stopped
     depends_on:
       redis:
         condition: service_healthy
@@ -39,6 +41,7 @@ services:
       dockerfile: './docker/engine.dockerfile'
       args:
         DATABASE_URL: ${DATABASE_URL}
+    restart: unless-stopped
     environment:
       MONGODB_URL: ${MONGODB_URL}
       DATABASE_URL: ${DATABASE_URL}
@@ -55,6 +58,7 @@ services:
       dockerfile: './docker/poller.dockerfile'
     environment:
       REDIS_URL: ${REDIS_URL}
+    restart: unless-stopped
     depends_on:
       redis:
         condition: service_healthy
@@ -62,7 +66,7 @@ services:
   redis:
     image: redis
     container_name: imex-redis
-    restart: always
+    restart: unless-stopped
     ports:
       - '6379:6379'
     volumes:
