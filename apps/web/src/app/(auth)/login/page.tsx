@@ -60,7 +60,7 @@ const Login = () => {
             Welcome Back
           </CardTitle>
           <CardDescription className="text-muted-foreground">
-            Sign in to your MarketView Pro account
+            Sign in to your Trade Pro account
           </CardDescription>
         </CardHeader>
 
