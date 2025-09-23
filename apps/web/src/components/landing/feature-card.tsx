@@ -28,17 +28,11 @@ export const FeatureCard = ({
       whileHover={{ y: -10 }}
     >
       <motion.div
-        className="w-16 h-16 bg-primary-light rounded-full flex items-center justify-center mx-auto"
-        whileHover={{
-          scale: 1.1,
-          rotate: 360,
-          backgroundColor: 'hsl(var(--primary))',
-        }}
-        transition={{ duration: 0.3 }}
+        className="w-14 h-14 rounded-full border border-border bg-background flex items-center justify-center mx-auto"
+        whileHover={{ scale: 1.05 }}
+        transition={{ duration: 0.2 }}
       >
-        <motion.div whileHover={{ scale: 1.2 }} transition={{ duration: 0.2 }}>
-          <Icon className="w-8 h-8 text-primary group-hover:text-primary-foreground transition-colors" />
-        </motion.div>
+        <Icon className="w-7 h-7 text-foreground" />
       </motion.div>
 
       <motion.div
@@ -48,7 +42,9 @@ export const FeatureCard = ({
         transition={{ delay: index * 0.1 + 0.3 }}
       >
         <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-        <p className="text-muted-foreground text-sm">{description}</p>
+        <p className="text-muted-foreground text-sm leading-relaxed">
+          {description}
+        </p>
       </motion.div>
     </motion.div>
   );
