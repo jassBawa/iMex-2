@@ -45,6 +45,7 @@ export class RedisSubscriber {
           case 'TRADE_CLOSE_ACKNOWLEDGEMENT':
           case 'GET_BALANCE_ACKNOWLEDGEMENT':
           case 'TRADE_FETCH_ACKNOWLEDGEMENT':
+          case 'USER_ALREADY_EXISTS':
             this.callbacks[gotId]!.resolve(payload);
             delete this.callbacks[gotId];
             break;

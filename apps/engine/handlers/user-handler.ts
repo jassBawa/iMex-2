@@ -59,7 +59,7 @@ export async function handleUserCreation(
     } else {
       console.log(`⚠️ [USER] User already exists: ${payload.email}`);
 
-      await sendAcknowledgement(requestId, 'USER_CREATION_FAILED', {
+      await sendAcknowledgement(requestId, 'USER_ALREADY_EXISTS', {
         reason: 'User already exists',
         email: payload.email,
       });
