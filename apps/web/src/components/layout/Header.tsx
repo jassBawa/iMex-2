@@ -16,15 +16,17 @@ function Header() {
   };
 
   return (
-    <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+    <header className="border-b border-border bg-background/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-2 lg:space-x-3">
             <div className="h-7 w-7 lg:h-8 lg:w-8 bg-primary rounded-lg flex items-center justify-center">
-              {/* <BarChart3 className="h-4 w-4 lg:h-5 lg:w-5 text-primary-foreground" /> */}
+              <span className="text-primary-foreground font-bold text-sm lg:text-base">
+                TP
+              </span>
             </div>
-            <h1 className="text-display text-lg lg:text-xl font-bold truncate">
-              MarketView Pro
+            <h1 className="text-foreground text-lg lg:text-xl font-bold truncate">
+              TradePro
             </h1>
           </div>
 
